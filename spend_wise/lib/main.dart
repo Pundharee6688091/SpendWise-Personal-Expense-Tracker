@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:spend_wise/db/api.dart';
 
-void main() {
+void main() async{
   runApp(const MainApp());
+  final api = API();
+  await api.fetchData();
 }
 
 class MainApp extends StatelessWidget {

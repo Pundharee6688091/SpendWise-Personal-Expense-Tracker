@@ -51,18 +51,10 @@ class Category {
   final String name;
   final int colorValue;
 
-  Category({
-    this.id,
-    required this.name,
-    required this.colorValue,
-  });
+  Category({this.id, required this.name, required this.colorValue});
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'colorValue': colorValue,
-    };
+    return {'id': id, 'name': name, 'colorValue': colorValue};
   }
 
   factory Category.fromMap(Map<String, dynamic> map) {
@@ -95,7 +87,7 @@ class DatabaseHelper {
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
-  /// Creates the database tables and inserts default data.
+  //Create database tables and insert default data.
   Future _onCreate(Database db, int version) async {
     // Create Categories Table
     await db.execute('''
@@ -105,7 +97,6 @@ class DatabaseHelper {
         colorValue INTEGER NOT NULL
       )
     ''');
-
     // Create Transactions Table
     await db.execute('''
       CREATE TABLE transactions(
@@ -121,44 +112,49 @@ class DatabaseHelper {
 
     await _insertDefaultCategories(db);
   }
+}
 
-  Future<void> _insertDefaultCategories(Database db) async {
-    List<Category> defaultCategories = [
-      // Expenses
-      Category(
-        name: 'Food & Drink',
-        colorValue: Colors.red.toARGB32(),
-      ),
-      Category(
-        name: 'Transport',
-        colorValue: Colors.blue.toARGB32(),
-      ),
-      Category(
-        name: 'Rent',
-        colorValue: Colors.orange.toARGB32(),
-      ),
-      Category(
-        name: 'Utilities',
-        colorValue: Colors.teal.toARGB32(),
-      ),
-      Category(
-        name: 'Entertainment',
-        colorValue: Colors.purple.toARGB32(),
-      ),
+Future<void> _insertDefaultCategories(Database db) async {
+  List<Category> defaultCategories = [
+    // Expenses
+    Category(name: 'Food & Drink', colorValue: Colors.red.toARGB32()),
+    Category(name: 'Transport', colorValue: Colors.blue.toARGB32()),
+    Category(name: 'Rent', colorValue: Colors.orange.toARGB32()),
+    Category(name: 'Utilities', colorValue: Colors.teal.toARGB32()),
+    Category(name: 'Entertainment', colorValue: Colors.purple.toARGB32()),
 
-      // Income
-      Category(
-        name: 'Salary',
-        colorValue: Colors.green.toARGB32(),
-      ),
-      Category(
-        name: 'Investments',
-        colorValue: Colors.cyan.toARGB32(),
-      ),
-    ];
+    // Income
+    Category(name: 'Salary', colorValue: Colors.green.toARGB32()),
+    Category(name: 'Investments', colorValue: Colors.cyan.toARGB32()),
+  ];
 
-    for (var category in defaultCategories) {
-      await db.insert('categories', category.toMap());
-    }
+  for (var category in defaultCategories) {
+    await db.insert('categories', category.toMap());
   }
+}
+
+/// Fetches all categories from the database.
+Future<List<Category>> getCategories() async {
+  final db = await DatabaseHelper.instance.database;
+  final List<Map<String, dynamic>> maps = await db.query('categories');
+  // Convert List<Map<String, dynamic>> to List<Category>
+  return List.generate(maps.length, (i) {
+    return Category.fromMap(maps[i]);
+  });
+}
+
+//Fetches all transactions from the database.
+Future<List<Transaction>> getTransactions() async {
+  final db = await DatabaseHelper.instance.database;
+  final List<Map<String, dynamic>> maps = await db.query('transactions');
+  // Convert List<Map<String, dynamic>> to List<Transaction>
+  return List.generate(maps.length, (i) {
+    return Transaction.fromMap(maps[i]);
+  });
+}
+
+/// Inserts a new transaction into the database.
+Future<int> insertTransaction(Transaction transaction) async {
+  final db = await DatabaseHelper.instance.database;
+  return await db.insert('transactions', transaction.toMap());
 }
