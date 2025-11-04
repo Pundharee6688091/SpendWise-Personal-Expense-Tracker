@@ -13,6 +13,7 @@ class Transaction {
   final TransactionType type; // 'expense' or 'income'
   final int categoryId;
   final DateTime date;
+  final String note;
 
   Transaction({
     this.id,
@@ -21,6 +22,7 @@ class Transaction {
     required this.type,
     required this.categoryId,
     required this.date,
+    this.note = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -31,6 +33,7 @@ class Transaction {
       'type': type.name,
       'categoryId': categoryId,
       'date': date.toIso8601String(),
+      'note' : note,
     };
   }
 
@@ -42,6 +45,7 @@ class Transaction {
       type: TransactionType.values.byName(map['type'] as String),
       categoryId: map['categoryId'] as int,
       date: DateTime.parse(map['date'] as String),
+      note: map['note'] as String? ?? '',
     );
   }
 }
@@ -106,7 +110,9 @@ class DatabaseHelper {
         type TEXT NOT NULL,
         categoryId INTEGER NOT NULL,
         date TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (categoryId) REFERENCES categories (id)
+
       )
     ''');
 
