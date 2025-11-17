@@ -57,8 +57,15 @@ class Category {
   final String name;
   final int colorValue;
   final TransactionType defaultType; // Added to help filter in UI
+  final int iconCodePoint; // NEW: Stores the icon code point
 
-  Category({this.id, required this.name, required this.colorValue, required this.defaultType});
+  Category({
+    this.id, 
+    required this.name, 
+    required this.colorValue, 
+    required this.defaultType, 
+    required this.iconCodePoint, // NEW
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -66,6 +73,7 @@ class Category {
       'name': name, 
       'colorValue': colorValue,
       'defaultType': defaultType.name,
+      'iconCodePoint': iconCodePoint, // NEW
     };
   }
 
@@ -75,6 +83,7 @@ class Category {
       name: map['name'] as String,
       colorValue: map['colorValue'] as int,
       defaultType: TransactionType.values.byName(map['defaultType'] as String),
+      iconCodePoint: map['iconCodePoint'] as int, // NEW
     );
   }
 }
@@ -138,7 +147,7 @@ class DatabaseHelper {
   Future<Database> get database async {
     if (_database != null) return _database!; 
     
-    // NOTE: Deleting the old file ensures that if we added a column (like defaultType), 
+    // NOTE: Deleting the old file ensures that if we added a column (like defaultType or iconCodePoint), 
     // the new schema is applied correctly.
     _database = await _initDb(deleteExisting: true); 
     
@@ -160,13 +169,14 @@ class DatabaseHelper {
   }
 
   Future _onCreate(Database db, int version) async {
-    // Create Categories Table (now includes defaultType)
+    // Create Categories Table (now includes defaultType and iconCodePoint)
     await db.execute('''
       CREATE TABLE categories(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         colorValue INTEGER NOT NULL,
-        defaultType TEXT NOT NULL
+        defaultType TEXT NOT NULL,
+        iconCodePoint INTEGER NOT NULL 
       )
     ''');
     // Create Transactions Table
@@ -190,20 +200,36 @@ class DatabaseHelper {
 // --- CATEGORY FUNCTIONS ---
 
 Future<void> _insertDefaultCategories(Database db) async {
+  // Define custom colors and assign icons
+  
+  // Expenses Colors/Icons
+  final Color foodColor = const Color(0xFF4FC3F7);
+  final Color shoppingColor = const Color(0xFF81D4FA); 
+  final Color transportColor = const Color(0xFF9FA8DA); 
+  final Color rentColor = const Color(0xFF64B5F6); 
+  final Color utilitiesColor = const Color(0xFFC942D8); 
+  final Color entertainmentColor = const Color(0xFFC658D2); 
+  final Color othersColor = Colors.grey;
+
+  // Income Colors/Icons
+  final Color salaryColor = Colors.green;
+  final Color investmentsColor = Colors.cyan;
+  final Color giftColor = Colors.amber;
+  
   List<Category> defaultCategories = [
     // Expenses
-    Category(name: 'Food & Drink', colorValue: Colors.red.value, defaultType: TransactionType.expense),
-    Category(name: 'Transport', colorValue: Colors.blue.value, defaultType: TransactionType.expense),
-    Category(name: 'Rent', colorValue: Colors.orange.value, defaultType: TransactionType.expense),
-    Category(name: 'Utilities', colorValue: Colors.teal.value, defaultType: TransactionType.expense),
-    Category(name: 'Entertainment', colorValue: Colors.purple.value, defaultType: TransactionType.expense),
-    Category(name: 'Shopping', colorValue: Colors.pink.value, defaultType: TransactionType.expense),
-    Category(name: 'Others', colorValue: Colors.grey.value, defaultType: TransactionType.expense),
+    Category(name: 'Food & Drink', colorValue: foodColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.fastfood.codePoint),
+    Category(name: 'Shopping', colorValue: shoppingColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.shopping_bag.codePoint),
+    Category(name: 'Transport', colorValue: transportColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.directions_bus.codePoint),
+    Category(name: 'Rent', colorValue: rentColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.home.codePoint),
+    Category(name: 'Utilities', colorValue: utilitiesColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.lightbulb_outline.codePoint),
+    Category(name: 'Entertainment', colorValue: entertainmentColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.movie_filter.codePoint),
+    Category(name: 'Others', colorValue: othersColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.category_outlined.codePoint),
 
     // Income
-    Category(name: 'Salary', colorValue: Colors.green.value, defaultType: TransactionType.income),
-    Category(name: 'Investments', colorValue: Colors.cyan.value, defaultType: TransactionType.income),
-    Category(name: 'Gift', colorValue: Colors.amber.value, defaultType: TransactionType.income),
+    Category(name: 'Salary', colorValue: salaryColor.value, defaultType: TransactionType.income, iconCodePoint: Icons.work.codePoint),
+    Category(name: 'Investments', colorValue: investmentsColor.value, defaultType: TransactionType.income, iconCodePoint: Icons.trending_up.codePoint),
+    Category(name: 'Gift', colorValue: giftColor.value, defaultType: TransactionType.income, iconCodePoint: Icons.card_giftcard.codePoint),
   ];
 
   for (var category in defaultCategories) {

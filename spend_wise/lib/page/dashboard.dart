@@ -242,6 +242,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+      centerTitle: true,
+    );
+  }
   
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = index == _selectedIndex;
@@ -272,48 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
   
-  AppBar _buildAppBar() {
-    // Define the common outlined container style
-    BoxDecoration outlineDecoration = BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300, width: 1.5),
-        borderRadius: BorderRadius.circular(10), 
-    );
-    
-    // Define standard square constraints
-    const BoxConstraints squareConstraints = BoxConstraints(minWidth: 36, minHeight: 36);
-    
-    return AppBar(
-      title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
-      centerTitle: true,
-      
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 8.0), 
-        child: Container(
-          decoration: outlineDecoration,
-          margin: const EdgeInsets.only(right: 8.0, top: 4.0, bottom: 4.0), 
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 15),
-            onPressed: () {},
-            padding: EdgeInsets.zero, 
-            constraints: squareConstraints, // Square constraint applied
-          ),
-        ),
-      ),
-      
-      actions: [ 
-        Container(
-          decoration: outlineDecoration,
-          margin: const EdgeInsets.only(right: 8.0, top: 4.0, bottom: 4.0), 
-          child: IconButton(
-            icon: const Icon(Icons.more_vert, size: 15),
-            onPressed: () {},
-            padding: EdgeInsets.zero, 
-            constraints: squareConstraints, // Square constraint applied
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildCashflowHeader() {
     return Row(
