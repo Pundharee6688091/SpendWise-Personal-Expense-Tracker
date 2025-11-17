@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'edit_transaction.dart';
-import 'page/add_transaction.dart';
+import 'add_transaction.dart';
 
 // --- Data Models ---
 
@@ -46,16 +46,16 @@ class TransactionsScreen extends StatefulWidget {
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
   int selectedCategoryIndex = 0;
-  
+
   // Updated to match your Database List
   final List<String> categories = [
-    "All", 
-    "Food & Drink", 
-    "Transportation", 
-    "Rent", 
-    "Utilities", 
-    "Entertainment", 
-    "Salary", 
+    "All",
+    "Food & Drink",
+    "Transportation",
+    "Rent",
+    "Utilities",
+    "Entertainment",
+    "Salary",
     "Investments"
   ];
 
@@ -162,12 +162,15 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       filteredItems = allTransactions;
     } else {
       String selectedCategory = categories[selectedCategoryIndex];
-      filteredItems = allTransactions.where((item) => item.category == selectedCategory).toList();
+      filteredItems = allTransactions
+          .where((item) => item.category == selectedCategory)
+          .toList();
     }
 
     List<DaySection> sections = [];
     for (var item in filteredItems) {
-      var existingSectionIndex = sections.indexWhere((s) => s.headerTitle == item.date);
+      var existingSectionIndex =
+          sections.indexWhere((s) => s.headerTitle == item.date);
       if (existingSectionIndex != -1) {
         sections[existingSectionIndex].items.add(item);
       } else {
@@ -197,7 +200,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             children: [
               const SizedBox(height: 20),
               const Center(
-                child: Text("Transactions", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.black)),
+                child: Text("Transactions",
+                    style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black)),
               ),
               const SizedBox(height: 25),
               SizedBox(
@@ -208,11 +215,16 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   itemBuilder: (context, index) {
                     final isSelected = index == selectedCategoryIndex;
                     return GestureDetector(
-                      onTap: () => setState(() => selectedCategoryIndex = index),
+                      onTap: () =>
+                          setState(() => selectedCategoryIndex = index),
                       child: Container(
                         margin: const EdgeInsets.only(right: 24),
                         decoration: BoxDecoration(
-                          border: isSelected ? const Border(bottom: BorderSide(color: Color(0xFF5C6BC0), width: 2)) : null,
+                          border: isSelected
+                              ? const Border(
+                                  bottom: BorderSide(
+                                      color: Color(0xFF5C6BC0), width: 2))
+                              : null,
                         ),
                         alignment: Alignment.topCenter,
                         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -220,8 +232,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           categories[index],
                           style: TextStyle(
                             fontSize: 16,
-                            color: isSelected ? const Color(0xFF5C6BC0) : Colors.black,
-                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                            color: isSelected
+                                ? const Color(0xFF5C6BC0)
+                                : Colors.black,
+                            fontWeight: isSelected
+                                ? FontWeight.w500
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -233,7 +249,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               Expanded(
                 child: ListView.builder(
                   itemCount: currentSections.length,
-                  itemBuilder: (context, index) => _buildDaySection(currentSections[index]),
+                  itemBuilder: (context, index) =>
+                      _buildDaySection(currentSections[index]),
                 ),
               ),
             ],
@@ -248,7 +265,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 20),
-        Text(section.headerTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.black87)),
+        Text(section.headerTitle,
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87)),
         const SizedBox(height: 15),
         const Divider(height: 1, color: Colors.black12),
         const SizedBox(height: 15),
@@ -260,17 +281,26 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget _buildTransactionTile(TransactionItem item) {
     return GestureDetector(
       onTap: () async {
-        final updatedItem = await Navigator.push(
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => EditTransactionScreen(item: item),
           ),
         );
-        if (updatedItem != null && updatedItem is TransactionItem) {
+
+        if (result == null) return;
+
+        if (result is Map<String, dynamic> && result['action'] == 'delete') {
+          final id = result['id'] as String;
           setState(() {
-            final index = allTransactions.indexWhere((element) => element.id == item.id);
+            allTransactions.removeWhere((element) => element.id == id);
+          });
+        } else if (result is TransactionItem) {
+          setState(() {
+            final index =
+                allTransactions.indexWhere((element) => element.id == item.id);
             if (index != -1) {
-              allTransactions[index] = updatedItem;
+              allTransactions[index] = result;
             }
           });
         }
@@ -281,8 +311,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         child: Row(
           children: [
             Container(
-              height: 50, width: 50,
-              decoration: BoxDecoration(color: item.iconBgColor, borderRadius: BorderRadius.circular(16)),
+              height: 50,
+              width: 50,
+              decoration: BoxDecoration(
+                  color: item.iconBgColor,
+                  borderRadius: BorderRadius.circular(16)),
               child: Icon(item.iconData, color: Colors.black54, size: 26),
             ),
             const SizedBox(width: 16),
@@ -290,9 +323,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
+                  Text(item.title,
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black)),
                   const SizedBox(height: 4),
-                  Text(item.subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                  Text(item.subtitle,
+                      style: const TextStyle(fontSize: 14, color: Colors.grey)),
                 ],
               ),
             ),
