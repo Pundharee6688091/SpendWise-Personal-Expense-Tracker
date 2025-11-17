@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'transaction.dart';
+import 'delete_transaction.dart';
 
 class EditTransactionScreen extends StatefulWidget {
   final TransactionItem item;
@@ -13,13 +14,19 @@ class EditTransactionScreen extends StatefulWidget {
 class _EditTransactionScreenState extends State<EditTransactionScreen> {
   late TextEditingController amountController;
   late TextEditingController noteController;
-  
+
   bool isIncome = false;
   late String selectedCategory;
   late DateTime selectedDate;
 
   // --- UPDATED LISTS ---
-  final List<String> expenseCategories = ["Food & Drink", "Transportation", "Rent", "Utilities", "Entertainment"];
+  final List<String> expenseCategories = [
+    "Food & Drink",
+    "Transportation",
+    "Rent",
+    "Utilities",
+    "Entertainment"
+  ];
   final List<String> incomeCategories = ["Salary", "Investments"];
 
   @override
@@ -31,7 +38,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     isIncome = !widget.item.isNegative;
 
     selectedCategory = widget.item.category;
-    
+
     // Fix category matching if valid options changed
     if (isIncome && !incomeCategories.contains(selectedCategory)) {
       selectedCategory = incomeCategories.first;
@@ -40,23 +47,65 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       selectedCategory = "Food & Drink";
     }
 
-    selectedDate = DateTime.now(); 
+    selectedDate = DateTime.now();
   }
 
-  List<String> get currentCategoryOptions => isIncome ? incomeCategories : expenseCategories;
+  List<String> get currentCategoryOptions =>
+      isIncome ? incomeCategories : expenseCategories;
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       return "Today";
     }
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ];
     return "${months[date.month - 1]} ${date.day}";
   }
-  
+
   String _formatFullDate(DateTime date) {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ];
     return "${months[date.month - 1]} ${date.day}, ${date.year}";
+  }
+
+  Future<void> _confirmDelete() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DeleteTransactionScreen(item: widget.item),
+      ),
+    );
+
+    if (result != null) {
+      Navigator.pop(context, result);
+    }
   }
 
   void _saveTransaction() {
@@ -101,14 +150,15 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
     TransactionItem updatedItem = TransactionItem(
       id: widget.item.id,
-      title: noteController.text.isEmpty ? selectedCategory : noteController.text,
-      subtitle: widget.item.subtitle, 
+      title:
+          noteController.text.isEmpty ? selectedCategory : noteController.text,
+      subtitle: widget.item.subtitle,
       amount: "${isIncome ? '+' : '-'} \$${amountController.text}",
       isNegative: !isIncome,
       iconBgColor: newColor,
       iconData: newIcon,
-      category: selectedCategory, 
-      date: _formatDate(selectedDate), 
+      category: selectedCategory,
+      date: _formatDate(selectedDate),
     );
 
     Navigator.pop(context, updatedItem);
@@ -125,7 +175,8 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Edit transaction", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600)),
+        title: const Text("Edit transaction",
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600)),
         centerTitle: true,
       ),
       body: Padding(
@@ -139,14 +190,21 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("USD", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.grey)),
+                  const Text("USD",
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey)),
                   const SizedBox(width: 10),
                   IntrinsicWidth(
                     child: TextField(
                       controller: amountController,
-                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w600),
-                      decoration: const InputDecoration(border: InputBorder.none),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(
+                          fontSize: 40, fontWeight: FontWeight.w600),
+                      decoration:
+                          const InputDecoration(border: InputBorder.none),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
                 ],
@@ -154,7 +212,9 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
               const SizedBox(height: 30),
               Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20)),
                 child: Row(
                   children: [
                     _buildToggleButton("Expense", !isIncome),
@@ -163,22 +223,37 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                 ),
               ),
               const SizedBox(height: 30),
-              _buildClickableField(label: "Category", value: selectedCategory, icon: Icons.category_outlined, onTap: _showCategoryPicker),
+              _buildClickableField(
+                  label: "Category",
+                  value: selectedCategory,
+                  icon: Icons.category_outlined,
+                  onTap: _showCategoryPicker),
               const SizedBox(height: 20),
-              _buildClickableField(label: "Date", value: _formatFullDate(selectedDate), icon: Icons.calendar_today, onTap: _pickDate),
+              _buildClickableField(
+                  label: "Date",
+                  value: _formatFullDate(selectedDate),
+                  icon: Icons.calendar_today,
+                  onTap: _pickDate),
               const SizedBox(height: 20),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   const Text("Note", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                   const SizedBox(height: 8),
-                   TextField(
-                     controller: noteController,
-                     decoration: InputDecoration(
-                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF5C6BC0))),
-                     ),
-                   ),
+                  const Text("Note",
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: noteController,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF5C6BC0))),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 40),
@@ -187,8 +262,24 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: _saveTransaction,
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5C6BC0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  child: const Text("Save", style: TextStyle(color: Colors.white, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5C6BC0),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12))),
+                  child: const Text("Save",
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: _confirmDelete,
+                child: const Text(
+                  "Delete transaction",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -207,7 +298,10 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF5C6BC0), onPrimary: Colors.white, onSurface: Colors.black),
+            colorScheme: const ColorScheme.light(
+                primary: Color(0xFF5C6BC0),
+                onPrimary: Colors.white,
+                onSurface: Colors.black),
           ),
           child: child!,
         );
@@ -219,7 +313,8 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   void _showCategoryPicker() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(16),
@@ -227,7 +322,8 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Select Category", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text("Select Category",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               Expanded(
                 child: ListView.separated(
@@ -237,7 +333,8 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                     return ListTile(
                       title: Text(currentCategoryOptions[index]),
                       onTap: () {
-                        setState(() => selectedCategory = currentCategoryOptions[index]);
+                        setState(() =>
+                            selectedCategory = currentCategoryOptions[index]);
                         Navigator.pop(context);
                       },
                     );
@@ -264,26 +361,39 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(color: isActive ? const Color(0xFFE3F2FD) : Colors.transparent, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(
+              color: isActive ? const Color(0xFFE3F2FD) : Colors.transparent,
+              borderRadius: BorderRadius.circular(16)),
           child: Center(
-            child: Text(text, style: TextStyle(fontWeight: FontWeight.w600, color: isActive ? const Color(0xFF1565C0) : Colors.grey)),
+            child: Text(text,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isActive ? const Color(0xFF1565C0) : Colors.grey)),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildClickableField({required String label, required String value, required IconData icon, required VoidCallback onTap}) {
+  Widget _buildClickableField(
+      {required String label,
+      required String value,
+      required IconData icon,
+      required VoidCallback onTap}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        Text(label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12), color: Colors.white),
+            decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white),
             child: Row(
               children: [
                 Icon(icon, size: 20, color: Colors.grey.shade700),
