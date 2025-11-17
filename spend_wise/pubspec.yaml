@@ -1,22 +1,30 @@
 name: spend_wise
-description: "A new Flutter project."
-publish_to: 'none'
-version: 0.1.0
+description: A simple and efficient mobile application for tracking daily expenses built in Flutter with SQLite.
+version: 1.0.0+1
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 environment:
-  sdk: ^3.9.2
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  sqflite: ^2.4.2
+  
+  # Database and File System
+  sqflite: ^2.3.0
   path: ^1.8.3
   path_provider: ^2.1.1
+  
+  # Charts/Visualization
+  fl_chart: ^0.65.0
+  
+  # Utilities
+  intl: ^0.18.1 # For date formatting (used in main.dart)
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true
