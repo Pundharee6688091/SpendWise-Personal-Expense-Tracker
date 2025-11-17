@@ -19,8 +19,8 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   late DateTime selectedDate;
 
   // --- UPDATED LISTS ---
-  final List<String> expenseCategories = ["Transportation", "Food & Drink", "Rent", "Utilities", "Entertainment"];
-  final List<String> incomeCategories = ["Earnings", "Investment"];
+  final List<String> expenseCategories = ["Food & Drink", "Transportation", "Rent", "Utilities", "Entertainment"];
+  final List<String> incomeCategories = ["Salary", "Investments"];
 
   @override
   void initState() {
@@ -32,10 +32,12 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
     selectedCategory = widget.item.category;
     
+    // Fix category matching if valid options changed
     if (isIncome && !incomeCategories.contains(selectedCategory)) {
       selectedCategory = incomeCategories.first;
     } else if (!isIncome && !expenseCategories.contains(selectedCategory)) {
-      selectedCategory = expenseCategories.contains(widget.item.category) ? widget.item.category : "Food & Drink";
+      // Default if not found
+      selectedCategory = "Food & Drink";
     }
 
     selectedDate = DateTime.now(); 
@@ -61,36 +63,39 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     IconData newIcon;
     Color newColor;
 
-    // --- UPDATED ICON & COLOR LOGIC ---
+    // --- UPDATED COLOR LOGIC TO MATCH DATABASE ---
     switch (selectedCategory) {
-      case "Transportation":
-        newIcon = Icons.local_gas_station;
-        newColor = const Color(0xFFFFF3E0); // Orange
-        break;
       case "Food & Drink":
         newIcon = Icons.fastfood;
-        newColor = const Color(0xFFFFEBEE); // Red
+        newColor = const Color(0xFFFFEBEE); // Light Red
+        break;
+      case "Transportation":
+        newIcon = Icons.local_gas_station;
+        newColor = const Color(0xFFE3F2FD); // Light Blue
         break;
       case "Rent":
         newIcon = Icons.home;
-        newColor = const Color(0xFFE0F2F1); // Teal
+        newColor = const Color(0xFFFFF3E0); // Light Orange
         break;
       case "Utilities":
         newIcon = Icons.lightbulb;
-        newColor = const Color(0xFFFFF8E1); // Amber
+        newColor = const Color(0xFFE0F2F1); // Light Teal
         break;
       case "Entertainment":
         newIcon = Icons.movie;
-        newColor = const Color(0xFFF3E5F5); // Purple
+        newColor = const Color(0xFFF3E5F5); // Light Purple
         break;
-      case "Investment":
-        newIcon = Icons.trending_up;
-        newColor = const Color(0xFFE8F5E9); // Green
-        break;
-      case "Earnings":
-      default:
+      case "Salary":
         newIcon = Icons.attach_money;
-        newColor = const Color(0xFFE3F2FD); // Blue
+        newColor = const Color(0xFFE8F5E9); // Light Green
+        break;
+      case "Investments":
+        newIcon = Icons.trending_up;
+        newColor = const Color(0xFFE0F7FA); // Light Cyan
+        break;
+      default:
+        newIcon = Icons.help_outline;
+        newColor = Colors.grey.shade200;
         break;
     }
 
@@ -218,7 +223,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(16),
-          height: 350, // Increased height to fit new categories
+          height: 350,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

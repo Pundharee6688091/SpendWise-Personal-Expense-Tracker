@@ -46,18 +46,19 @@ class TransactionsScreen extends StatefulWidget {
 class _TransactionsScreenState extends State<TransactionsScreen> {
   int selectedCategoryIndex = 0;
   
+  // Updated to match your Database List
   final List<String> categories = [
     "All", 
-    "Transportation", 
     "Food & Drink", 
+    "Transportation", 
     "Rent", 
     "Utilities", 
     "Entertainment", 
-    "Earnings", 
-    "Investment"
+    "Salary", 
+    "Investments"
   ];
 
-  // --- MASTER LIST: Added new items here ---
+  // --- MASTER LIST ---
   List<TransactionItem> allTransactions = [
     // Today
     TransactionItem(
@@ -66,7 +67,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       subtitle: "Gas & Oil",
       amount: "- \$45.00",
       isNegative: true,
-      iconBgColor: const Color(0xFFFFF3E0),
+      iconBgColor: const Color(0xFFE3F2FD), // Light Blue (Transportation)
       iconData: Icons.local_gas_station,
       category: "Transportation",
       date: "Today",
@@ -77,9 +78,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       subtitle: "Freelance Payment",
       amount: "+ \$80.00",
       isNegative: false,
-      iconBgColor: const Color(0xFFE3F2FD),
+      iconBgColor: const Color(0xFFE8F5E9), // Light Green (Salary/Earnings)
       iconData: Icons.paypal,
-      category: "Earnings",
+      category: "Salary",
       date: "Today",
     ),
     TransactionItem(
@@ -88,9 +89,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       subtitle: "Dividends",
       amount: "+ \$150.00",
       isNegative: false,
-      iconBgColor: const Color(0xFFE8F5E9), // Green
+      iconBgColor: const Color(0xFFE0F7FA), // Light Cyan (Investments)
       iconData: Icons.trending_up,
-      category: "Investment",
+      category: "Investments",
       date: "Today",
     ),
     TransactionItem(
@@ -99,7 +100,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       subtitle: "Subscription",
       amount: "- \$12.00",
       isNegative: true,
-      iconBgColor: const Color(0xFFF3E5F5), // Purple
+      iconBgColor: const Color(0xFFF3E5F5), // Light Purple (Entertainment)
       iconData: Icons.movie,
       category: "Entertainment",
       date: "Today",
@@ -112,7 +113,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       subtitle: "Lunch",
       amount: "- \$12.50",
       isNegative: true,
-      iconBgColor: const Color(0xFFFFEBEE),
+      iconBgColor: const Color(0xFFFFEBEE), // Light Red (Food & Drink)
       iconData: Icons.fastfood,
       category: "Food & Drink",
       date: "Sep 25",
@@ -123,7 +124,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       subtitle: "Coffee",
       amount: "- \$5.50",
       isNegative: true,
-      iconBgColor: const Color(0xFFEFEBE9),
+      iconBgColor: const Color(0xFFFFEBEE), // Light Red (Food & Drink)
       iconData: Icons.coffee,
       category: "Food & Drink",
       date: "Sep 25",
@@ -136,7 +137,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       subtitle: "Monthly Rent",
       amount: "- \$800.00",
       isNegative: true,
-      iconBgColor: const Color(0xFFE0F2F1), // Teal
+      iconBgColor: const Color(0xFFFFF3E0), // Light Orange (Rent)
       iconData: Icons.home,
       category: "Rent",
       date: "Sep 01",
@@ -147,25 +148,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       subtitle: "Monthly Utility",
       amount: "- \$120.00",
       isNegative: true,
-      iconBgColor: const Color(0xFFFFF8E1), // Amber
+      iconBgColor: const Color(0xFFE0F2F1), // Light Teal (Utilities)
       iconData: Icons.lightbulb,
       category: "Utilities",
       date: "Sep 01",
     ),
-    TransactionItem(
-      id: "9",
-      title: "Salary",
-      subtitle: "Monthly Income",
-      amount: "+ \$2,500.00",
-      isNegative: false,
-      iconBgColor: const Color(0xFFE8F5E9),
-      iconData: Icons.attach_money,
-      category: "Earnings",
-      date: "Sep 01",
-    ),
   ];
 
-  // --- Logic to Filter & Group Data ---
   List<DaySection> get currentSections {
     List<TransactionItem> filteredItems;
     if (selectedCategoryIndex == 0) {
@@ -178,7 +167,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     List<DaySection> sections = [];
     for (var item in filteredItems) {
       var existingSectionIndex = sections.indexWhere((s) => s.headerTitle == item.date);
-      
       if (existingSectionIndex != -1) {
         sections[existingSectionIndex].items.add(item);
       } else {
@@ -191,14 +179,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
@@ -211,8 +191,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 child: Text("Transactions", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.black)),
               ),
               const SizedBox(height: 25),
-              
-              // Tabs
               SizedBox(
                 height: 40,
                 child: ListView.builder(
@@ -243,8 +221,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              
-              // Dynamic List
               Expanded(
                 child: ListView.builder(
                   itemCount: currentSections.length,
@@ -281,7 +257,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             builder: (context) => EditTransactionScreen(item: item),
           ),
         );
-
         if (updatedItem != null && updatedItem is TransactionItem) {
           setState(() {
             final index = allTransactions.indexWhere((element) => element.id == item.id);
