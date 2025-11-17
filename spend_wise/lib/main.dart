@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'page/dashboard.dart';
 import 'page/transaction.dart';
 import 'page/catagory.dart';
-import 'page/addTransaction.dart';
+import 'page/add_transaction.dart';
 import 'page/profile.dart';
 
 // Data/API
