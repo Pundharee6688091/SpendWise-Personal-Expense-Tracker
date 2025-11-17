@@ -124,7 +124,7 @@ Future<void> _insertDefaultCategories(Database db) async {
   List<Category> defaultCategories = [
     // Expenses
     Category(name: 'Food & Drink', colorValue: Colors.red.toARGB32()),
-    Category(name: 'Transport', colorValue: Colors.blue.toARGB32()),
+    Category(name: 'Transportation', colorValue: Colors.blue.toARGB32()),
     Category(name: 'Rent', colorValue: Colors.orange.toARGB32()),
     Category(name: 'Utilities', colorValue: Colors.teal.toARGB32()),
     Category(name: 'Entertainment', colorValue: Colors.purple.toARGB32()),
