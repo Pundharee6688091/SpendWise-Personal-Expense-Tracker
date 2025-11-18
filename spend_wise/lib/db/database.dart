@@ -4,10 +4,9 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
-// --- MODELS ---
+enum TransactionType { expense, income } // 2 transaction type
 
-enum TransactionType { expense, income }
-
+// transaction
 class Transaction {
   final int? id;
   final String title;
@@ -35,7 +34,7 @@ class Transaction {
       'type': type.name,
       'categoryId': categoryId,
       'date': date.toIso8601String(),
-      'note' : note,
+      'note': note,
     };
   }
 
@@ -52,6 +51,7 @@ class Transaction {
   }
 }
 
+// category
 class Category {
   final int? id;
   final String name;
@@ -60,17 +60,17 @@ class Category {
   final int iconCodePoint;
 
   Category({
-    this.id, 
-    required this.name, 
-    required this.colorValue, 
-    required this.defaultType, 
+    this.id,
+    required this.name,
+    required this.colorValue,
+    required this.defaultType,
     required this.iconCodePoint,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id, 
-      'name': name, 
+      'id': id,
+      'name': name,
       'colorValue': colorValue,
       'defaultType': defaultType.name,
       'iconCodePoint': iconCodePoint,
@@ -88,7 +88,7 @@ class Category {
   }
 }
 
-// Model for financial summary data
+// table for financial summary data
 class FinancialSummary {
   final double totalIncome;
   final double totalExpense;
@@ -100,7 +100,7 @@ class FinancialSummary {
   }) : netBalance = totalIncome - totalExpense;
 }
 
-// Model for top spending category insight
+// table for top spending category
 class CategorySpending {
   final String categoryName;
   final int colorValue;
@@ -113,7 +113,7 @@ class CategorySpending {
   });
 }
 
-// Model for monthly/daily income/expense totals (Bar Chart Data)
+// table for Bar Chart Data
 class MonthlyCashflow {
   final int month;
   final double totalIncome;
@@ -134,31 +134,28 @@ class MonthlyCashflow {
   }
 }
 
-
-// --- DATABASE HELPER ---
-
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
   static Database? _database;
 
   DatabaseHelper._privateConstructor();
 
-  /// Gets the database instance, initializing it if it doesn't exist.
+  /// get db create one if it does not exist
   Future<Database> get database async {
-    if (_database != null) return _database!; 
-    // Changed: removed deleteExisting: true to prevent data wipe on restart
-    _database = await _initDb(); 
+    if (_database != null) return _database!;
+    _database = await _initDb();
     return _database!;
   }
 
   Future<Database> _initDb() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'spendwise_db.db');
-    
-    // Only open the database (it calls onCreate if it doesn't exist)
+
+    // call func _onCreate if bd doesn't exist
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
+  // create db
   Future _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE categories(
@@ -186,37 +183,75 @@ class DatabaseHelper {
   }
 }
 
-// --- CATEGORY FUNCTIONS ---
 
 Future<void> _insertDefaultCategories(Database db) async {
-  // Expenses Colors/Icons
-  final Color foodColor = const Color(0xFF4FC3F7);
-  final Color shoppingColor = const Color(0xFF81D4FA); 
-  final Color transportColor = const Color(0xFF9FA8DA); 
-  final Color rentColor = const Color(0xFF64B5F6); 
-  final Color utilitiesColor = const Color(0xFFC942D8); 
-  final Color entertainmentColor = const Color(0xFFC658D2); 
-  final Color othersColor = Colors.grey;
 
-  // Income Colors/Icons
-  final Color salaryColor = Colors.green;
-  final Color investmentsColor = Colors.cyan;
-  final Color giftColor = Colors.amber;
-  
+  const Color foodColor = const Color(0xFF4FC3F7);
+  const Color shoppingColor = const Color(0xFF81D4FA);
+  const Color transportColor = const Color(0xFF9FA8DA);
+  const Color rentColor = Color(0xFF64B5F6);
+  const Color utilitiesColor = const Color(0xFFC942D8);
+  const Color entertainmentColor = const Color(0xFFC658D2);
+  const Color othersColor = Colors.grey;
+
+  const Color salaryColor = Colors.green;
+  const Color investmentsColor = Colors.cyan;
+  const Color giftColor = Colors.amber;
+
   List<Category> defaultCategories = [
     // Expenses
-    Category(name: 'Food & Drink', colorValue: foodColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.fastfood.codePoint),
-    Category(name: 'Shopping', colorValue: shoppingColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.shopping_bag.codePoint),
-    Category(name: 'Transport', colorValue: transportColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.directions_bus.codePoint),
-    Category(name: 'Rent', colorValue: rentColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.home.codePoint),
-    Category(name: 'Utilities', colorValue: utilitiesColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.lightbulb_outline.codePoint),
-    Category(name: 'Entertainment', colorValue: entertainmentColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.movie_filter.codePoint),
-    Category(name: 'Others', colorValue: othersColor.value, defaultType: TransactionType.expense, iconCodePoint: Icons.category_outlined.codePoint),
+    Category(
+        name: 'Food & Drink',
+        colorValue: foodColor.value,
+        defaultType: TransactionType.expense,
+        iconCodePoint: Icons.fastfood.codePoint),
+    Category(
+        name: 'Shopping',
+        colorValue: shoppingColor.value,
+        defaultType: TransactionType.expense,
+        iconCodePoint: Icons.shopping_bag.codePoint),
+    Category(
+        name: 'Transport',
+        colorValue: transportColor.value,
+        defaultType: TransactionType.expense,
+        iconCodePoint: Icons.directions_bus.codePoint),
+    Category(
+        name: 'Rent',
+        colorValue: rentColor.value,
+        defaultType: TransactionType.expense,
+        iconCodePoint: Icons.home.codePoint),
+    Category(
+        name: 'Utilities',
+        colorValue: utilitiesColor.value,
+        defaultType: TransactionType.expense,
+        iconCodePoint: Icons.lightbulb_outline.codePoint),
+    Category(
+        name: 'Entertainment',
+        colorValue: entertainmentColor.value,
+        defaultType: TransactionType.expense,
+        iconCodePoint: Icons.movie_filter.codePoint),
+    Category(
+        name: 'Others',
+        colorValue: othersColor.value,
+        defaultType: TransactionType.expense,
+        iconCodePoint: Icons.category_outlined.codePoint),
 
     // Income
-    Category(name: 'Salary', colorValue: salaryColor.value, defaultType: TransactionType.income, iconCodePoint: Icons.work.codePoint),
-    Category(name: 'Investments', colorValue: investmentsColor.value, defaultType: TransactionType.income, iconCodePoint: Icons.trending_up.codePoint),
-    Category(name: 'Gift', colorValue: giftColor.value, defaultType: TransactionType.income, iconCodePoint: Icons.card_giftcard.codePoint),
+    Category(
+        name: 'Salary',
+        colorValue: salaryColor.value,
+        defaultType: TransactionType.income,
+        iconCodePoint: Icons.work.codePoint),
+    Category(
+        name: 'Investments',
+        colorValue: investmentsColor.value,
+        defaultType: TransactionType.income,
+        iconCodePoint: Icons.trending_up.codePoint),
+    Category(
+        name: 'Gift',
+        colorValue: giftColor.value,
+        defaultType: TransactionType.income,
+        iconCodePoint: Icons.card_giftcard.codePoint),
   ];
 
   for (var category in defaultCategories) {
@@ -225,7 +260,6 @@ Future<void> _insertDefaultCategories(Database db) async {
 }
 
 // --- CATAGORY CRUD FUNCTIONS ---
-
 Future<List<Category>> getCategories() async {
   final db = await DatabaseHelper.instance.database;
   final List<Map<String, dynamic>> maps = await db.query('categories');
@@ -241,10 +275,9 @@ Future<int> insertCategories(Category category) async {
 
 Future<int> updateCategories(Category category) async {
   final db = await DatabaseHelper.instance.database;
-  
-  // We convert to map, but removing the ID from the values is safer for SQL
+
   var map = category.toMap();
-  map.remove('id'); 
+  map.remove('id');
 
   return await db.update(
     'categories',
@@ -264,7 +297,6 @@ Future<int> deleteCategories(int id) async {
 }
 
 // --- TRANSACTION CRUD FUNCTIONS ---
-
 Future<List<Transaction>> getTransactions() async {
   final db = await DatabaseHelper.instance.database;
   final List<Map<String, dynamic>> maps = await db.query(
@@ -283,10 +315,9 @@ Future<int> insertTransaction(Transaction transaction) async {
 
 Future<int> updateTransaction(Transaction transaction) async {
   final db = await DatabaseHelper.instance.database;
-  
-  // We convert to map, but removing the ID from the values is safer for SQL
+
   var map = transaction.toMap();
-  map.remove('id'); 
+  map.remove('id');
 
   return await db.update(
     'transactions',
@@ -304,6 +335,7 @@ Future<int> deleteTransaction(int id) async {
     whereArgs: [id],
   );
 }
+
 
 // --- AGGREGATE/INSIGHT FUNCTIONS ---
 
@@ -413,11 +445,9 @@ Future<List<MonthlyCashflow>> getDailyCashflow({
 
   return List.generate(maps.length, (i) {
     return MonthlyCashflow.fromMap({
-      'month': maps[i]['day'], 
+      'month': maps[i]['day'],
       'totalIncome': (maps[i]['totalIncome'] as num?)?.toDouble() ?? 0.0,
       'totalExpense': (maps[i]['totalExpense'] as num?)?.toDouble() ?? 0.0,
     });
   });
 }
-
-// NOTE: The problematic ColorExtension has been removed.

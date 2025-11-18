@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'transaction.dart'; // Keeps your existing UI model
-import '../db/api.dart';   // Import API
-import '../main.dart';     // Import globalRefreshTrigger
+import 'transaction.dart';
+import '../db/api.dart';
+import '../main.dart';
 
 class DeleteTransactionScreen extends StatefulWidget {
   final TransactionItem item;
@@ -25,18 +25,13 @@ class _DeleteTransactionScreenState extends State<DeleteTransactionScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Parse the ID. 
-      // The DB uses int, but your UI model (TransactionItem) might store it as String.
       final int transactionId = int.parse(widget.item.id);
 
-      // 2. Call Database API
       await _api.deleteTransaction(transactionId);
 
-      // 3. Trigger Global Refresh so the Dashboard updates immediately
       globalRefreshTrigger.value++;
 
       if (mounted) {
-        // 4. Close the screen
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -139,7 +134,7 @@ class _DeleteTransactionScreenState extends State<DeleteTransactionScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          widget.item.rawDate.toString().split(' ')[0], // Convert DateTime to formatted date string
+                          widget.item.rawDate.toString().split(' ')[0],
                           style: const TextStyle(
                             fontSize: 13,
                             color: Colors.grey,

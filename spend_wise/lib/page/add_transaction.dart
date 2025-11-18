@@ -85,7 +85,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     try {
       final newTransaction = Transaction(
-        // Use input as Title (e.g. "KFC")
         title: noteController.text.isEmpty
             ? selectedCategory!.name
             : noteController.text,
@@ -93,8 +92,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         type: isIncome ? TransactionType.income : TransactionType.expense,
         categoryId: selectedCategory!.id!,
         date: selectedDate,
-        // FIX: Leave note empty to avoid duplication.
-        // The input field is essentially serving as the Title.
         note: '', 
       );
 

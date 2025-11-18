@@ -1,7 +1,9 @@
-import 'database.dart' as db; // 1. Add 'as db' prefix
+import 'database.dart' as db;
 
 class API {
-  /// Fetches all available categories.
+
+  // --- CRUD category --- //
+  /// Fetches all categories.
   Future<List<db.Category>> fetchCategories() async {
     try {
       return await db.getCategories();
@@ -11,7 +13,7 @@ class API {
     }
   }
 
-  /// Adds a new transaction.
+  /// Adds a new category.
   Future<int> addCategory(db.Category category) async {
     try {
       return await db.insertCategories(category);
@@ -21,10 +23,9 @@ class API {
     }
   }
 
-  /// Updates an existing transaction.
+  /// Updates an category.
   Future<int> updateCategory(db.Category category) async {
     try {
-      // 2. Explicitly call the database function using the prefix
       return await db.updateCategories(category); 
     } catch (e) {
       print('Error updating category: $e');
@@ -32,10 +33,9 @@ class API {
     }
   }
 
-  /// Deletes a transaction by ID.
+  /// Deletes a category by ID.
   Future<int> deleteCategory(int id) async {
     try {
-      // 3. Explicitly call the database function using the prefix
       return await db.deleteCategories(id);
     } catch (e) {
       print('Error deleting category: $e');
@@ -43,6 +43,8 @@ class API {
     }
   }
 
+
+  // --- CRUD transaction --- //
   /// Fetches all transactions.
   Future<List<db.Transaction>> fetchTransactions() async {
     try {
@@ -66,7 +68,6 @@ class API {
   /// Updates an existing transaction.
   Future<int> updateTransaction(db.Transaction transaction) async {
     try {
-      // 2. Explicitly call the database function using the prefix
       return await db.updateTransaction(transaction); 
     } catch (e) {
       print('Error updating transaction: $e');
@@ -77,7 +78,6 @@ class API {
   /// Deletes a transaction by ID.
   Future<int> deleteTransaction(int id) async {
     try {
-      // 3. Explicitly call the database function using the prefix
       return await db.deleteTransaction(id);
     } catch (e) {
       print('Error deleting transaction: $e');
@@ -85,7 +85,9 @@ class API {
     }
   }
 
-  /// Gets the financial summary.
+
+
+  /// Gets the financial summary between start and end date
   Future<db.FinancialSummary> fetchFinancialSummary({
     required DateTime startDate,
     required DateTime endDate,
@@ -98,7 +100,7 @@ class API {
     }
   }
 
-  /// Gets the Top N spending categories.
+  /// Gets the Top 5 spending categories between start and end date
   Future<List<db.CategorySpending>> fetchTopSpendingCategories({
     required DateTime startDate,
     required DateTime endDate,

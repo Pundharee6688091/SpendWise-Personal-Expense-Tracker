@@ -4,9 +4,7 @@ import '../db/database.dart';
 import '../page/edit_catagory.dart';
 import '../page/add_catagory.dart';
 
-// Renamed from CategoryManagementScreen to CategoriesScreen to match main.dart
 class CategoriesScreen extends StatefulWidget {
-  // Add the API as a required parameter
   final API api;
 
   const CategoriesScreen({super.key, required this.api});
@@ -16,16 +14,14 @@ class CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  // We no longer create a new API instance:
-  // final API _api = API();
 
   late Future<List<Category>> _categoriesFuture;
-  TransactionType _selectedType = TransactionType.income; // Default to Income
+  TransactionType _selectedType = TransactionType.income;
 
   @override
   void initState() {
     super.initState();
-    // Use the API instance passed from the widget
+
     _categoriesFuture = widget.api.fetchCategories();
   }
 
@@ -42,22 +38,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
   }
 
-  void _showAddCategoryDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        // Pass the API instance to the Add Dialog
-        return AddCategoryDialog(api: widget.api);
-      },
-    );
 
-    // If the dialog returned true (category was added), refresh the list
-    if (result == true) {
-      _reloadCategories();
-    }
-  }
-
-  // UPDATED _buildHeader()
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -68,7 +49,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        // Applying large rounding to the bottom corners to simulate the curve
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(60.0),
           bottomRight: Radius.circular(60.0),
@@ -106,7 +86,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   Widget _buildBackButton() {
     return Positioned(
-      top: 40.0, // Position it in the safe area (adjust this value as needed)
+      top: 40.0,
       left: 0.0,
       child: IconButton(
         icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
@@ -305,7 +285,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           itemBuilder: (context, index) {
             final category = filteredCategories[index];
 
-            // Pass the entire Category object for use in the tile and on click
             return _buildCategoryItem(category);
           },
         );
@@ -314,14 +293,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   Future<void> _reloadCategories() async {
-    // Assuming you have a method to fetch categories in your API and you are storing the future in _categoriesFuture
     setState(() {
       _categoriesFuture = widget.api.fetchCategories();
     });
   }
 
   Widget _buildCategoryItem(Category category) {
-    // Convert DB values to Flutter objects
     final Color itemColor = Color(category.colorValue);
     final Color tileBackgroundColor = itemColor.withOpacity(0.15);
     final IconData iconData =
@@ -329,13 +306,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
     return GestureDetector(
       onTap: () async {
-        // 1. Show the Edit Category Dialog
         final result = await showDialog<bool>(
           context: context,
           builder: (BuildContext context) {
             return EditCategoryDialog(
               category: category,
-              api: widget.api, // Pass the API instance
+              api: widget.api,
             );
           },
         );
@@ -374,8 +350,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   Widget _buildAddCategoryButton() {
     return Center(
       child: GestureDetector(
-        // <-- Wrap with GestureDetector
-        onTap: _showAddCategoryDialog, // <-- Call the new dialog handler
+        onTap: _showAddCategoryDialog,
         child: Column(
           children: [
             Container(
@@ -396,5 +371,19 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         ),
       ),
     );
+  }
+
+      //show the add category pop up
+  void _showAddCategoryDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AddCategoryDialog(api: widget.api);
+      },
+    );
+
+    if (result == true) {
+      _reloadCategories();
+    }
   }
 }

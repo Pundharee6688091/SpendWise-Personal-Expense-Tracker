@@ -12,8 +12,6 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
-        // The leading button pops the screen and returns a result of 'true',
-        // which signals the Dashboard to reset its selected index to 0 (Home).
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, size: 20),
           onPressed: () => Navigator.pop(context, true), 
