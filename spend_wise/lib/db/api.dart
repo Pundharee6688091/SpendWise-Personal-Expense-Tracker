@@ -11,6 +11,38 @@ class API {
     }
   }
 
+  /// Adds a new transaction.
+  Future<int> addCategory(db.Category category) async {
+    try {
+      return await db.insertCategories(category);
+    } catch (e) {
+      print('Error adding category: $e');
+      return -1;
+    }
+  }
+
+  /// Updates an existing transaction.
+  Future<int> updateCategory(db.Category category) async {
+    try {
+      // 2. Explicitly call the database function using the prefix
+      return await db.updateCategories(category); 
+    } catch (e) {
+      print('Error updating category: $e');
+      return -1;
+    }
+  }
+
+  /// Deletes a transaction by ID.
+  Future<int> deleteCategory(int id) async {
+    try {
+      // 3. Explicitly call the database function using the prefix
+      return await db.deleteCategories(id);
+    } catch (e) {
+      print('Error deleting category: $e');
+      return -1;
+    }
+  }
+
   /// Fetches all transactions.
   Future<List<db.Transaction>> fetchTransactions() async {
     try {
@@ -116,3 +148,4 @@ class API {
     }
   }
 }
+

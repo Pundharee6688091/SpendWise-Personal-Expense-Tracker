@@ -224,12 +224,43 @@ Future<void> _insertDefaultCategories(Database db) async {
   }
 }
 
+// --- CATAGORY CRUD FUNCTIONS ---
+
 Future<List<Category>> getCategories() async {
   final db = await DatabaseHelper.instance.database;
   final List<Map<String, dynamic>> maps = await db.query('categories');
   return List.generate(maps.length, (i) {
     return Category.fromMap(maps[i]);
   });
+}
+
+Future<int> insertCategories(Category category) async {
+  final db = await DatabaseHelper.instance.database;
+  return await db.insert('categories', category.toMap());
+}
+
+Future<int> updateCategories(Category category) async {
+  final db = await DatabaseHelper.instance.database;
+  
+  // We convert to map, but removing the ID from the values is safer for SQL
+  var map = category.toMap();
+  map.remove('id'); 
+
+  return await db.update(
+    'categories',
+    map,
+    where: 'id = ?',
+    whereArgs: [category.id],
+  );
+}
+
+Future<int> deleteCategories(int id) async {
+  final db = await DatabaseHelper.instance.database;
+  return await db.delete(
+    'categories',
+    where: 'id = ?',
+    whereArgs: [id],
+  );
 }
 
 // --- TRANSACTION CRUD FUNCTIONS ---

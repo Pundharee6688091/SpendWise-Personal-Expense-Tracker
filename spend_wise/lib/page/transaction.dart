@@ -106,7 +106,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           id: t.id.toString(),
           title: t.title,
           // If note is empty, show category name as subtitle
-          subtitle: (t.note.isNotEmpty) ? t.note : catName, 
+          subtitle: catName,
           amount: amountStr,
           isNegative: t.type == TransactionType.expense,
           iconBgColor: Color(colorVal).withOpacity(0.2), // Lighten the stored color
