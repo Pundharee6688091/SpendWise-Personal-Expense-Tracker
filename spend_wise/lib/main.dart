@@ -181,8 +181,6 @@ class SpendWiseApp extends StatelessWidget {
 
           // --- Navigation Callbacks ---
           onNavigate: (index) async {
-            if (index == 1) {
-              // Transactions List
               if (index == 1) {
                 // Transactions List
                 // 1. Wait for the TransactionsScreen to pop
@@ -190,10 +188,11 @@ class SpendWiseApp extends StatelessWidget {
                     builder: (c) => const TransactionsScreen()));
 
                 // 2. ALWAYS trigger the global refresh on return
-                globalRefreshTrigger.value++;
+              } else if (index == 4) {
+                await Navigator.of(context).push(MaterialPageRoute(builder: (c) => ProfileScreen(api: globalApi)));
               }
-            }
             
+            globalRefreshTrigger.value++;
           },
 
           // --- UPDATE: Add Transaction Logic ---

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
 import '../db/api.dart';
 import '../db/database.dart';
 
 // Callback function definitions
 typedef NavigateCallback = void Function(int index);
 typedef ShowAddTransactionCallback = void Function();
-
 
 class DashboardScreen extends StatefulWidget {
   final API api;
@@ -17,8 +16,8 @@ class DashboardScreen extends StatefulWidget {
   final ShowAddTransactionCallback onShowAddTransaction;
 
   const DashboardScreen({
-    super.key, 
-    required this.api, 
+    super.key,
+    required this.api,
     required this.refreshTrigger,
     required this.onNavigate,
     required this.onShowAddTransaction,
@@ -30,22 +29,22 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   // --- STATE AND INITIALIZATION (Functions/Logic at the Top) ---
-  
+
   // Date range state: default to the start of the current year.
   DateTime _startDate = DateTime(DateTime.now().year, 1, 1);
   DateTime _endDate = DateTime.now();
-  String _dateFilter = 'Year'; 
+  String _dateFilter = 'Year';
 
   // Data states
   FinancialSummary _summary = FinancialSummary(totalIncome: 0, totalExpense: 0);
   List<CategorySpending> _topCategories = [];
-  
+
   // This list holds Cashflow data (MonthlyCashflow for 'Year', DailyCashflow for 'Month'/'Day')
-  List<MonthlyCashflow> _cashflowData = []; 
+  List<MonthlyCashflow> _cashflowData = [];
   double _maxY = 5000.0; // Max Y-axis value for the chart
-  
+
   // Navigation state (0: Home, 1: Transactions, 3: Categories, 4: Profile)
-  int _selectedIndex = 0; 
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -62,7 +61,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Handles Bottom Bar tap events
   void _onItemTapped(int index) {
-    if (index == 2) { // Index 2 is the Floating Action Button slot
+    if (index == 2) {
+      // Index 2 is the Floating Action Button slot
       widget.onShowAddTransaction();
     } else {
       // 0 is Home (stay on Dashboard), others are navigation calls
@@ -75,7 +75,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-
   /// Calculates the date range based on the selected filter.
   void _calculateDateRange(String filter) {
     final now = DateTime.now();
@@ -87,21 +86,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       newEndDate = newStartDate.add(const Duration(hours: 23, minutes: 59));
     } else if (filter == 'Month') {
       newStartDate = DateTime(now.year, now.month, 1);
-      newEndDate = DateTime(now.year, now.month + 1, 0).add(const Duration(hours: 23, minutes: 59));
-    } else { // 'Year'
+      newEndDate = DateTime(now.year, now.month + 1, 0)
+          .add(const Duration(hours: 23, minutes: 59));
+    } else {
+      // 'Year'
       newStartDate = DateTime(now.year, 1, 1);
-      newEndDate = DateTime(now.year, 12, 31).add(const Duration(hours: 23, minutes: 59));
+      newEndDate = DateTime(now.year, 12, 31)
+          .add(const Duration(hours: 23, minutes: 59));
     }
-    
+
     _startDate = newStartDate;
     _endDate = newEndDate;
   }
 
   /// Fetches all data required for the dashboard.
   Future<void> _fetchData() async {
+    _selectedIndex = 0;
     // 1. Calculate date range for current filter
     _calculateDateRange(_dateFilter);
-    // Use DateTime.now() as the current end date for summary/top categories 
+    // Use DateTime.now() as the current end date for summary/top categories
     // to avoid including future mock data if the filter is 'Year'
     final currentEndDate = DateTime.now();
 
@@ -110,7 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       startDate: _startDate,
       endDate: currentEndDate,
     );
-    
+
     final topCategories = await widget.api.fetchTopSpendingCategories(
       startDate: _startDate,
       endDate: currentEndDate,
@@ -119,51 +122,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // 3. Fetch Bar Chart Data
     List<MonthlyCashflow> cashflowData;
-    
+
     if (_dateFilter == 'Year') {
       // For Year view, query monthly data for the full year
       cashflowData = await widget.api.fetchMonthlyCashflow(
-        startDate: DateTime(currentEndDate.year, 1, 1), 
-        endDate: DateTime(currentEndDate.year, 12, 31).add(const Duration(hours: 23, minutes: 59)),
+        startDate: DateTime(currentEndDate.year, 1, 1),
+        endDate: DateTime(currentEndDate.year, 12, 31)
+            .add(const Duration(hours: 23, minutes: 59)),
       );
-    } else { // 'Month' or 'Day'
+    } else {
+      // 'Month' or 'Day'
       // For Month/Day view, query daily data for the current month
       cashflowData = await widget.api.fetchDailyCashflow(
         startDate: DateTime(currentEndDate.year, currentEndDate.month, 1),
-        endDate: DateTime(currentEndDate.year, currentEndDate.month + 1, 0).add(const Duration(hours: 23, minutes: 59)),
+        endDate: DateTime(currentEndDate.year, currentEndDate.month + 1, 0)
+            .add(const Duration(hours: 23, minutes: 59)),
       );
     }
 
     // Determine max Y value for scaling
     double maxIncome = cashflowData.map((m) => m.totalIncome).fold(0.0, max);
     double maxExpense = cashflowData.map((m) => m.totalExpense).fold(0.0, max);
-    
+
     double newMaxY = max(maxIncome, maxExpense) * 1.2;
-    
+
     // --- Y-Axis Scaling ---
-    double interval = 1.0; 
+    double interval = 1.0;
     if (_dateFilter == 'Year') {
       interval = 1000.0;
     } else {
-      double powerOfTen = pow(10, (newMaxY > 10 ? log(newMaxY) / log(10) : 1.0).floor()).toDouble();
-      double factor = newMaxY / powerOfTen; 
-      
-      // Determine a visually clean interval based on the max value
-      if (factor > 5) factor = 10;
-      else if (factor > 2) factor = 5;
-      else if (factor > 1) factor = 2;
-      else factor = 1;
+      double powerOfTen =
+          pow(10, (newMaxY > 10 ? log(newMaxY) / log(10) : 1.0).floor())
+              .toDouble();
+      double factor = newMaxY / powerOfTen;
 
-      interval = factor * powerOfTen / 5; 
+      // Determine a visually clean interval based on the max value
+      if (factor > 5)
+        factor = 10;
+      else if (factor > 2)
+        factor = 5;
+      else if (factor > 1)
+        factor = 2;
+      else
+        factor = 1;
+
+      interval = factor * powerOfTen / 5;
 
       // Safely ensure clean intervals for smaller amounts
-      if (newMaxY < 100 && interval < 10) interval = 10;
-      else if (newMaxY < 20 && interval < 5) interval = 5;
-      else if (newMaxY == 0) interval = 100; 
+      if (newMaxY < 100 && interval < 10)
+        interval = 10;
+      else if (newMaxY < 20 && interval < 5)
+        interval = 5;
+      else if (newMaxY == 0) interval = 100;
     }
-    
+
     // Recalculate newMaxY based on the clean interval
-    newMaxY = (newMaxY / interval).ceil() * interval; 
+    newMaxY = (newMaxY / interval).ceil() * interval;
 
     if (mounted) {
       setState(() {
@@ -171,27 +185,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _topCategories = topCategories;
         _cashflowData = cashflowData;
         // Fallback for safety if the interval calculation resulted in a zero or negative max Y.
-        _maxY = newMaxY > 0 ? newMaxY : 500.0; 
+        _maxY = newMaxY > 0 ? newMaxY : 500.0;
       });
     }
   }
-  
+
   /// Helper for the Bar Chart: creates a single bar group with two rods (income/expense).
-  BarChartGroupData _makeBarGroup(int x, double incomeAmount, double expenseAmount, {double barWidth = 8}) {
+  BarChartGroupData _makeBarGroup(
+      int x, double incomeAmount, double expenseAmount,
+      {double barWidth = 8}) {
     return BarChartGroupData(
       x: x,
       barRods: [
         BarChartRodData(
-          toY: incomeAmount, 
+          toY: incomeAmount,
           color: Colors.indigo.shade300,
           width: barWidth,
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(3), topRight: Radius.circular(3)),
+          borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(3), topRight: Radius.circular(3)),
         ),
         BarChartRodData(
-          toY: expenseAmount, 
+          toY: expenseAmount,
           color: Colors.amber.shade300,
           width: barWidth,
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(3), topRight: Radius.circular(3)),
+          borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(3), topRight: Radius.circular(3)),
         ),
       ],
     );
@@ -245,14 +263,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text('Dashboard',
+          style: TextStyle(fontWeight: FontWeight.bold)),
       centerTitle: true,
     );
   }
-  
+
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = index == _selectedIndex;
-    
+
     return Expanded(
       child: InkWell(
         onTap: () => _onItemTapped(index),
@@ -278,8 +297,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-  
-
 
   Widget _buildCashflowHeader() {
     return Row(
@@ -289,10 +306,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Total Cashflow', style: TextStyle(fontSize: 16, color: Colors.grey)),
+              const Text('Total Cashflow',
+                  style: TextStyle(fontSize: 16, color: Colors.grey)),
               Text(
                 '\$${_summary.netBalance.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -302,17 +321,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
-  
+
   Widget _buildBarChartContainer() {
     return AspectRatio(
       aspectRatio: 1.7,
-      child: _dateFilter == 'Year' ? _buildYearlyBarChart() : _buildDailyBarChart(),
+      child: _dateFilter == 'Year'
+          ? _buildYearlyBarChart()
+          : _buildDailyBarChart(),
     );
   }
 
   Widget _buildYearlyBarChart() {
     // Logic for the full 12-month chart (when filter is 'Year')
-    
+
     // Create a map for quick lookup: {month_index: MonthlyCashflow}
     Map<int, MonthlyCashflow> monthlyMap = {
       for (var data in _cashflowData) data.month - 1: data
@@ -323,7 +344,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final data = monthlyMap[i];
       return _makeBarGroup(
         i, // x value is the month index (0-11)
-        data?.totalIncome ?? 0.0, 
+        data?.totalIncome ?? 0.0,
         data?.totalExpense ?? 0.0,
       );
     });
@@ -331,7 +352,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
-        maxY: _maxY, 
+        maxY: _maxY,
         barTouchData: BarTouchData(enabled: false),
         titlesData: FlTitlesData(
           show: true,
@@ -339,8 +360,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
-                final month = (value.toInt() % 12) + 1; 
-                final monthName = DateFormat('MMM').format(DateTime(DateTime.now().year, month));
+                final month = (value.toInt() % 12) + 1;
+                final monthName = DateFormat('MMM')
+                    .format(DateTime(DateTime.now().year, month));
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
                   space: 4,
@@ -355,7 +377,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 if (value % 1000 == 0) {
-                    return Text('\$${(value / 1000).toInt()}K', style: const TextStyle(fontSize: 10));
+                  return Text('\$${(value / 1000).toInt()}K',
+                      style: const TextStyle(fontSize: 10));
                 }
                 return const Text('');
               },
@@ -363,45 +386,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
               reservedSize: 32,
             ),
           ),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         gridData: FlGridData(
           show: true,
           drawHorizontalLine: true,
           drawVerticalLine: false,
           horizontalInterval: 1000,
-          getDrawingHorizontalLine: (value) => const FlLine(color: Color(0xff374447), strokeWidth: 0.1),
+          getDrawingHorizontalLine: (value) =>
+              const FlLine(color: Color(0xff374447), strokeWidth: 0.1),
         ),
         borderData: FlBorderData(show: false),
-        barGroups: barGroups, 
+        barGroups: barGroups,
       ),
     );
   }
 
   Widget _buildDailyBarChart() {
     // Logic for the daily chart (when filter is 'Month' or 'Day')
-    
+
     // Determine the number of days to display (up to the current day for 'Day' filter)
-    int daysToDisplay = _dateFilter == 'Day' 
-      ? DateTime.now().day // Only show one day if the data filter is set to day
-      : DateTime(_endDate.year, _endDate.month + 1, 0).day; // Days in the filtered month
+    int daysToDisplay = _dateFilter == 'Day'
+        ? DateTime.now()
+            .day // Only show one day if the data filter is set to day
+        : DateTime(_endDate.year, _endDate.month + 1, 0)
+            .day; // Days in the filtered month
 
     // Create a map for quick lookup: {day_of_month: DailyCashflow}
     Map<int, MonthlyCashflow> dailyMap = {
       // The 'month' field in MonthlyCashflow model is holding the 'day' number (1-31)
-      for (var data in _cashflowData) data.month: data 
+      for (var data in _cashflowData) data.month: data
     };
 
     // Determine bar width based on number of bars (smaller bar for monthly view)
-    double barWidth = _dateFilter == 'Day' ? 40 : 4; 
+    double barWidth = _dateFilter == 'Day' ? 40 : 4;
 
     List<BarChartGroupData> barGroups = List.generate(daysToDisplay, (i) {
       final day = i + 1; // 1 to daysToDisplay
       final data = dailyMap[day];
       return _makeBarGroup(
         i, // x value is the index (0 to daysToDisplay-1)
-        data?.totalIncome ?? 0.0, 
+        data?.totalIncome ?? 0.0,
         data?.totalExpense ?? 0.0,
         barWidth: barWidth,
       );
@@ -409,35 +437,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // If filter is 'Day', we only show the current day's data
     if (_dateFilter == 'Day') {
-       barGroups = barGroups.sublist(barGroups.length - 1);
+      barGroups = barGroups.sublist(barGroups.length - 1);
     }
-    
+
     // --- Y-Axis interval calculation for Daily/Monthly view ---
     // Recalculate Y-axis properties here using _maxY (which was calculated in _fetchData)
-    double interval = _maxY / 5; 
-    
+    double interval = _maxY / 5;
+
     if (interval > 1) {
-        if (interval < 5) interval = 5;
-        else if (interval < 10) interval = 10;
-        else if (interval < 25) interval = 25;
-        else if (interval < 50) interval = 50;
-        else if (interval < 100) interval = 100;
-        else interval = (interval / 100).ceil() * 100.0;
+      if (interval < 5)
+        interval = 5;
+      else if (interval < 10)
+        interval = 10;
+      else if (interval < 25)
+        interval = 25;
+      else if (interval < 50)
+        interval = 50;
+      else if (interval < 100)
+        interval = 100;
+      else
+        interval = (interval / 100).ceil() * 100.0;
     } else {
-        interval = 1.0;
+      interval = 1.0;
     }
-    
+
     // Ensure the Y-axis interval is positive and the max Y is rounded cleanly
     if (interval <= 0 || _maxY <= 0) {
       interval = 100.0;
       _maxY = 500.0;
     }
 
-
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
-        maxY: _maxY, 
+        maxY: _maxY,
         barTouchData: BarTouchData(enabled: false),
         titlesData: FlTitlesData(
           show: true,
@@ -447,13 +480,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               getTitlesWidget: (value, meta) {
                 // If filter is 'Day', show today's date
                 if (_dateFilter == 'Day') {
-                    return SideTitleWidget(
-                      axisSide: meta.axisSide,
-                      space: 4,
-                      child: Text(DateFormat('MMM d').format(DateTime.now()), style: const TextStyle(fontSize: 10)),
-                    );
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    space: 4,
+                    child: Text(DateFormat('MMM d').format(DateTime.now()),
+                        style: const TextStyle(fontSize: 10)),
+                  );
                 }
-                
+
                 // If filter is 'Month', show day number (1, 5, 10, etc.)
                 final day = value.toInt() + 1;
                 // Only show day number labels on the 1st, 5th, 10th, 15th, 20th, 25th, and last day
@@ -474,18 +508,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 // Show label only at the calculated interval steps
-                if (value == 0 || (value % interval) < 1e-6) { // Use a small epsilon for double comparison
-                    return Text('\$${value.toStringAsFixed(0)}', style: const TextStyle(fontSize: 10));
+                if (value == 0 || (value % interval) < 1e-6) {
+                  // Use a small epsilon for double comparison
+                  return Text('\$${value.toStringAsFixed(0)}',
+                      style: const TextStyle(fontSize: 10));
                 }
                 return const Text('');
               },
               // Use the calculated interval here
-              interval: interval, 
+              interval: interval,
               reservedSize: 32,
             ),
           ),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         gridData: FlGridData(
           show: true,
@@ -493,15 +531,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           drawVerticalLine: false,
           // Use the calculated interval for grid lines too
           horizontalInterval: interval,
-          getDrawingHorizontalLine: (value) => const FlLine(color: Color(0xff374447), strokeWidth: 0.1),
+          getDrawingHorizontalLine: (value) =>
+              const FlLine(color: Color(0xff374447), strokeWidth: 0.1),
         ),
         borderData: FlBorderData(show: false),
-        barGroups: barGroups, 
+        barGroups: barGroups,
       ),
     );
   }
 
-  
   Widget _buildFilterDropdown() {
     // Wrapping the DropdownButton in a Container to add a background and border radius
     return Container(
@@ -511,19 +549,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: DropdownButton<String>(
-        value: _dateFilter, 
+        value: _dateFilter,
         icon: const Icon(Icons.keyboard_arrow_down, color: Colors.indigo),
         underline: const SizedBox(),
         // Set dropdown color to match the container background
         dropdownColor: Colors.white,
         style: const TextStyle(
             color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 14),
-        items: <String>['Day', 'Month', 'Year'].map<DropdownMenuItem<String>>((String value) {
+        items: <String>['Day', 'Month', 'Year']
+            .map<DropdownMenuItem<String>>((String value) {
           return DropdownMenuItem<String>(
             value: value,
-            child: Text(value, style: const TextStyle(
-              color: Colors.indigo, 
-              fontWeight: FontWeight.bold)),
+            child: Text(value,
+                style: const TextStyle(
+                    color: Colors.indigo, fontWeight: FontWeight.bold)),
           );
         }).toList(),
         onChanged: (String? newValue) {
@@ -531,13 +570,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             setState(() {
               _dateFilter = newValue;
             });
-            _fetchData(); 
+            _fetchData();
           }
         },
       ),
     );
   }
-  
+
   Widget _buildIncomeExpenseSummary() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -547,7 +586,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           amount: _summary.totalIncome,
           // Use Indigo/Blue for Income to match the bar chart
           icon: Icons.arrow_upward,
-          color: Colors.indigo.shade400, 
+          color: Colors.indigo.shade400,
         ),
         _buildSummaryCard(
           title: 'Expense',
@@ -560,7 +599,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSummaryCard({required String title, required double amount, required IconData icon, required Color color}) {
+  Widget _buildSummaryCard(
+      {required String title,
+      required double amount,
+      required IconData icon,
+      required Color color}) {
     // This widget uses helper parameters, but the implementation is self-contained.
     return Expanded(
       child: Container(
@@ -588,10 +631,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(title,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 Text(
                   '\$${amount.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -602,7 +647,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildExpenseInsightSection() {
-    final totalExpense = _topCategories.fold(0.0, (sum, item) => sum + item.totalAmount);
+    final totalExpense =
+        _topCategories.fold(0.0, (sum, item) => sum + item.totalAmount);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,14 +656,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Top 5 Expense Categories', style: TextStyle(fontWeight: FontWeight.bold))
+            Text('Top 5 Expense Categories',
+                style: TextStyle(fontWeight: FontWeight.bold))
           ],
         ),
         const SizedBox(height: 15),
         if (totalExpense > 0) ...[
           _buildPieChart(totalExpense),
           const SizedBox(height: 20),
-          
         ] else ...[
           const Center(
             child: Padding(
@@ -629,7 +675,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
-  
+
   Widget _buildPieChart(double totalExpense) {
     return AspectRatio(
       aspectRatio: 1.0,
@@ -637,7 +683,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         PieChartData(
           sectionsSpace: 0,
           // Increase center space radius for a thinner donut
-          centerSpaceRadius: 70, 
+          centerSpaceRadius: 70,
           sections: _topCategories.asMap().entries.map((entry) {
             final category = entry.value;
             final percentage = totalExpense > 0
@@ -647,14 +693,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: Color(category.colorValue),
               value: category.totalAmount,
               // Show title (category name and percentage)
-              title: '${category.categoryName} \n ${percentage.toStringAsFixed(1)}%',
+              title:
+                  '${category.categoryName} \n ${percentage.toStringAsFixed(1)}%',
               radius: 60,
               // Position the title further out
-              titlePositionPercentageOffset: 1.6, 
+              titlePositionPercentageOffset: 1.6,
               titleStyle: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Color(category.colorValue), // Set text color to match slice color
+                color: Color(
+                    category.colorValue), // Set text color to match slice color
               ),
             );
           }).toList(),
@@ -662,5 +710,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
 }
