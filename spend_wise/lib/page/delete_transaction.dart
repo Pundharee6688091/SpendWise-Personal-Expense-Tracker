@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'transaction.dart';
+import 'transaction.dart'; // Keeps your existing UI model
+import '../db/api.dart';   // Import API
+import '../main.dart';     // Import globalRefreshTrigger
 
-class DeleteTransactionScreen extends StatelessWidget {
+class DeleteTransactionScreen extends StatefulWidget {
   final TransactionItem item;
 
   const DeleteTransactionScreen({
@@ -9,9 +11,44 @@ class DeleteTransactionScreen extends StatelessWidget {
     required this.item,
   });
 
-  // --- HELPERS ---
+  @override
+  State<DeleteTransactionScreen> createState() => _DeleteTransactionScreenState();
+}
 
-  bool get _isNegative => item.isNegative;
+class _DeleteTransactionScreenState extends State<DeleteTransactionScreen> {
+  final API _api = API();
+  bool _isLoading = false;
+
+  bool get _isNegative => widget.item.isNegative;
+
+  Future<void> _deleteTransaction() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Parse the ID. 
+      // The DB uses int, but your UI model (TransactionItem) might store it as String.
+      final int transactionId = int.parse(widget.item.id);
+
+      // 2. Call Database API
+      await _api.deleteTransaction(transactionId);
+
+      // 3. Trigger Global Refresh so the Dashboard updates immediately
+      globalRefreshTrigger.value++;
+
+      if (mounted) {
+        // 4. Close the screen
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+        print("Error deleting transaction: $e");
+        setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to delete transaction")),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,11 +107,11 @@ class DeleteTransactionScreen extends StatelessWidget {
                     height: 50,
                     width: 50,
                     decoration: BoxDecoration(
-                      color: item.iconBgColor,
+                      color: widget.item.iconBgColor,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
-                      item.iconData,
+                      widget.item.iconData,
                       color: Colors.black54,
                       size: 26,
                     ),
@@ -85,7 +122,7 @@ class DeleteTransactionScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.title,
+                          widget.item.title,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -94,7 +131,7 @@ class DeleteTransactionScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          item.category,
+                          widget.item.category,
                           style: const TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
@@ -102,7 +139,7 @@ class DeleteTransactionScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          item.date,
+                          widget.item.rawDate.toString().split(' ')[0], // Convert DateTime to formatted date string
                           style: const TextStyle(
                             fontSize: 13,
                             color: Colors.grey,
@@ -112,7 +149,7 @@ class DeleteTransactionScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    item.amount,
+                    widget.item.amount,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -130,9 +167,7 @@ class DeleteTransactionScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                    onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: Colors.grey.shade400),
                       shape: RoundedRectangleBorder(
@@ -152,12 +187,7 @@ class DeleteTransactionScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context, {
-                        'action': 'delete',
-                        'id': item.id,
-                      });
-                    },
+                    onPressed: _isLoading ? null : _deleteTransaction,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       shape: RoundedRectangleBorder(
@@ -165,13 +195,19 @@ class DeleteTransactionScreen extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text(
-                      "Delete",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isLoading 
+                      ? const SizedBox(
+                          height: 20, 
+                          width: 20, 
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                        )
+                      : const Text(
+                          "Delete",
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white,
+                          ),
+                        ),
                   ),
                 ),
               ],
@@ -183,3 +219,4 @@ class DeleteTransactionScreen extends StatelessWidget {
     );
   }
 }
+  

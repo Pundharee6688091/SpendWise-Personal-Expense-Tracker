@@ -12,7 +12,7 @@ class Transaction {
   final int? id;
   final String title;
   final double amount;
-  final TransactionType type; // 'expense' or 'income'
+  final TransactionType type;
   final int categoryId;
   final DateTime date;
   final String note;
@@ -56,15 +56,15 @@ class Category {
   final int? id;
   final String name;
   final int colorValue;
-  final TransactionType defaultType; // Added to help filter in UI
-  final int iconCodePoint; // NEW: Stores the icon code point
+  final TransactionType defaultType;
+  final int iconCodePoint;
 
   Category({
     this.id, 
     required this.name, 
     required this.colorValue, 
     required this.defaultType, 
-    required this.iconCodePoint, // NEW
+    required this.iconCodePoint,
   });
 
   Map<String, dynamic> toMap() {
@@ -73,7 +73,7 @@ class Category {
       'name': name, 
       'colorValue': colorValue,
       'defaultType': defaultType.name,
-      'iconCodePoint': iconCodePoint, // NEW
+      'iconCodePoint': iconCodePoint,
     };
   }
 
@@ -83,7 +83,7 @@ class Category {
       name: map['name'] as String,
       colorValue: map['colorValue'] as int,
       defaultType: TransactionType.values.byName(map['defaultType'] as String),
-      iconCodePoint: map['iconCodePoint'] as int, // NEW
+      iconCodePoint: map['iconCodePoint'] as int,
     );
   }
 }
@@ -115,7 +115,7 @@ class CategorySpending {
 
 // Model for monthly/daily income/expense totals (Bar Chart Data)
 class MonthlyCashflow {
-  final int month; // For monthly view (1-12) or daily view (1-31)
+  final int month;
   final double totalIncome;
   final double totalExpense;
 
@@ -146,30 +146,20 @@ class DatabaseHelper {
   /// Gets the database instance, initializing it if it doesn't exist.
   Future<Database> get database async {
     if (_database != null) return _database!; 
-    
-    // NOTE: Deleting the old file ensures that if we added a column (like defaultType or iconCodePoint), 
-    // the new schema is applied correctly.
-    _database = await _initDb(deleteExisting: true); 
-    
+    // Changed: removed deleteExisting: true to prevent data wipe on restart
+    _database = await _initDb(); 
     return _database!;
   }
 
-  Future<Database> _initDb({bool deleteExisting = false}) async {
+  Future<Database> _initDb() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'spendwise_db.db');
     
-    // Delete the file if deleteExisting is true to ensure the schema update
-    if (deleteExisting && await databaseFactory.databaseExists(path)) {
-      await deleteDatabase(path);
-      print('Old database deleted for schema update.');
-    }
-
-    // Version 1 is used since we are deleting and recreating the database.
+    // Only open the database (it calls onCreate if it doesn't exist)
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
   Future _onCreate(Database db, int version) async {
-    // Create Categories Table (now includes defaultType and iconCodePoint)
     await db.execute('''
       CREATE TABLE categories(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,7 +169,6 @@ class DatabaseHelper {
         iconCodePoint INTEGER NOT NULL 
       )
     ''');
-    // Create Transactions Table
     await db.execute('''
       CREATE TABLE transactions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,8 +189,6 @@ class DatabaseHelper {
 // --- CATEGORY FUNCTIONS ---
 
 Future<void> _insertDefaultCategories(Database db) async {
-  // Define custom colors and assign icons
-  
   // Expenses Colors/Icons
   final Color foodColor = const Color(0xFF4FC3F7);
   final Color shoppingColor = const Color(0xFF81D4FA); 
@@ -237,7 +224,6 @@ Future<void> _insertDefaultCategories(Database db) async {
   }
 }
 
-/// Fetches all categories from the database.
 Future<List<Category>> getCategories() async {
   final db = await DatabaseHelper.instance.database;
   final List<Map<String, dynamic>> maps = await db.query('categories');
@@ -248,7 +234,6 @@ Future<List<Category>> getCategories() async {
 
 // --- TRANSACTION CRUD FUNCTIONS ---
 
-/// Fetches all transactions from the database, sorted by date descending.
 Future<List<Transaction>> getTransactions() async {
   final db = await DatabaseHelper.instance.database;
   final List<Map<String, dynamic>> maps = await db.query(
@@ -260,24 +245,26 @@ Future<List<Transaction>> getTransactions() async {
   });
 }
 
-/// Inserts a new transaction into the database.
 Future<int> insertTransaction(Transaction transaction) async {
   final db = await DatabaseHelper.instance.database;
   return await db.insert('transactions', transaction.toMap());
 }
 
-/// Updates an existing transaction.
 Future<int> updateTransaction(Transaction transaction) async {
   final db = await DatabaseHelper.instance.database;
+  
+  // We convert to map, but removing the ID from the values is safer for SQL
+  var map = transaction.toMap();
+  map.remove('id'); 
+
   return await db.update(
     'transactions',
-    transaction.toMap(),
+    map,
     where: 'id = ?',
     whereArgs: [transaction.id],
   );
 }
 
-/// Deletes a transaction by ID.
 Future<int> deleteTransaction(int id) async {
   final db = await DatabaseHelper.instance.database;
   return await db.delete(
@@ -289,7 +276,6 @@ Future<int> deleteTransaction(int id) async {
 
 // --- AGGREGATE/INSIGHT FUNCTIONS ---
 
-/// Calculates total income, total expense, and net balance within a date range.
 Future<FinancialSummary> getFinancialSummary({
   required DateTime startDate,
   required DateTime endDate,
@@ -316,7 +302,6 @@ Future<FinancialSummary> getFinancialSummary({
   );
 }
 
-/// Calculates the Top 5 spending categories within a date range.
 Future<List<CategorySpending>> getTopSpendingCategories({
   required DateTime startDate,
   required DateTime endDate,
@@ -348,7 +333,6 @@ Future<List<CategorySpending>> getTopSpendingCategories({
   });
 }
 
-/// Fetches total income and expense broken down by month for a given year.
 Future<List<MonthlyCashflow>> getMonthlyCashflow({
   required DateTime startDate,
   required DateTime endDate,
@@ -377,7 +361,6 @@ Future<List<MonthlyCashflow>> getMonthlyCashflow({
   });
 }
 
-/// Fetches total income and expense broken down by day for a given period.
 Future<List<MonthlyCashflow>> getDailyCashflow({
   required DateTime startDate,
   required DateTime endDate,
@@ -399,7 +382,6 @@ Future<List<MonthlyCashflow>> getDailyCashflow({
 
   return List.generate(maps.length, (i) {
     return MonthlyCashflow.fromMap({
-      // We use the 'month' field in MonthlyCashflow model to hold the 'day' value (1-31)
       'month': maps[i]['day'], 
       'totalIncome': (maps[i]['totalIncome'] as num?)?.toDouble() ?? 0.0,
       'totalExpense': (maps[i]['totalExpense'] as num?)?.toDouble() ?? 0.0,
@@ -407,10 +389,4 @@ Future<List<MonthlyCashflow>> getDailyCashflow({
   });
 }
 
-
-// --- UTILITY FOR COLOR CONVERSION ---
-extension ColorExtension on Color {
-  int get value {
-    return this.value; 
-  }
-}
+// NOTE: The problematic ColorExtension has been removed.

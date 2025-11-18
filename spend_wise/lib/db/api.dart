@@ -1,10 +1,10 @@
-import 'database.dart';
+import 'database.dart' as db; // 1. Add 'as db' prefix
 
 class API {
   /// Fetches all available categories.
-  Future<List<Category>> fetchCategories() async {
+  Future<List<db.Category>> fetchCategories() async {
     try {
-      return await getCategories();
+      return await db.getCategories();
     } catch (e) {
       print('Error fetching categories: $e');
       return [];
@@ -12,9 +12,9 @@ class API {
   }
 
   /// Fetches all transactions.
-  Future<List<Transaction>> fetchTransactions() async {
+  Future<List<db.Transaction>> fetchTransactions() async {
     try {
-      return await getTransactions();
+      return await db.getTransactions();
     } catch (e) {
       print('Error fetching transactions: $e');
       return [];
@@ -22,56 +22,58 @@ class API {
   }
 
   /// Adds a new transaction.
-  Future<int> addTransaction(Transaction transaction) async {
+  Future<int> addTransaction(db.Transaction transaction) async {
     try {
-      return await insertTransaction(transaction);
+      return await db.insertTransaction(transaction);
     } catch (e) {
       print('Error adding transaction: $e');
-      return -1; // Indicate failure
+      return -1;
     }
   }
 
   /// Updates an existing transaction.
-  Future<int> updateTransaction(Transaction transaction) async {
+  Future<int> updateTransaction(db.Transaction transaction) async {
     try {
-      return await updateTransaction(transaction);
+      // 2. Explicitly call the database function using the prefix
+      return await db.updateTransaction(transaction); 
     } catch (e) {
       print('Error updating transaction: $e');
-      return -1; // Indicate failure
+      return -1;
     }
   }
 
   /// Deletes a transaction by ID.
   Future<int> deleteTransaction(int id) async {
     try {
-      return await deleteTransaction(id);
+      // 3. Explicitly call the database function using the prefix
+      return await db.deleteTransaction(id);
     } catch (e) {
       print('Error deleting transaction: $e');
-      return -1; // Indicate failure
+      return -1;
     }
   }
 
-  /// Gets the financial summary (Income, Expense, Net Balance) for a given period.
-  Future<FinancialSummary> fetchFinancialSummary({
+  /// Gets the financial summary.
+  Future<db.FinancialSummary> fetchFinancialSummary({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
     try {
-      return await getFinancialSummary(startDate: startDate, endDate: endDate);
+      return await db.getFinancialSummary(startDate: startDate, endDate: endDate);
     } catch (e) {
       print('Error fetching financial summary: $e');
-      return FinancialSummary(totalIncome: 0, totalExpense: 0);
+      return db.FinancialSummary(totalIncome: 0, totalExpense: 0);
     }
   }
 
-  /// Gets the Top N spending categories for a given period.
-  Future<List<CategorySpending>> fetchTopSpendingCategories({
+  /// Gets the Top N spending categories.
+  Future<List<db.CategorySpending>> fetchTopSpendingCategories({
     required DateTime startDate,
     required DateTime endDate,
     int limit = 5,
   }) async {
     try {
-      return await getTopSpendingCategories(
+      return await db.getTopSpendingCategories(
         startDate: startDate,
         endDate: endDate,
         limit: limit,
@@ -82,13 +84,13 @@ class API {
     }
   }
 
-  /// Gets the monthly cashflow data (income and expense totals per month) for a given period.
-  Future<List<MonthlyCashflow>> fetchMonthlyCashflow({
+  /// Gets the monthly cashflow data.
+  Future<List<db.MonthlyCashflow>> fetchMonthlyCashflow({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
     try {
-      return await getMonthlyCashflow(
+      return await db.getMonthlyCashflow(
         startDate: startDate,
         endDate: endDate,
       );
@@ -98,13 +100,13 @@ class API {
     }
   }
   
-  /// Gets the daily cashflow data (income and expense totals per day) for a given period.
-  Future<List<MonthlyCashflow>> fetchDailyCashflow({
+  /// Gets the daily cashflow data.
+  Future<List<db.MonthlyCashflow>> fetchDailyCashflow({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
     try {
-      return await getDailyCashflow(
+      return await db.getDailyCashflow(
         startDate: startDate,
         endDate: endDate,
       );

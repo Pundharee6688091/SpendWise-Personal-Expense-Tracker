@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../db/api.dart';
+import '../db/database.dart'; 
 import 'edit_transaction.dart';
-import 'add_transaction.dart';
 
 // --- Data Models ---
 
+// UI-Specific Model (Adapts Database Data for Display)
 class TransactionItem {
   final String id;
   final String title;
@@ -13,7 +16,8 @@ class TransactionItem {
   final Color iconBgColor;
   final IconData iconData;
   final String category;
-  final String date;
+  final String dateHeader; // "Today", "Sep 25"
+  final DateTime rawDate;  // For sorting
 
   TransactionItem({
     required this.id,
@@ -24,7 +28,8 @@ class TransactionItem {
     required this.iconBgColor,
     required this.iconData,
     required this.category,
-    required this.date,
+    required this.dateHeader,
+    required this.rawDate,
   });
 }
 
@@ -45,136 +50,124 @@ class TransactionsScreen extends StatefulWidget {
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
+  // API Instance
+  final API _api = API();
+  
   int selectedCategoryIndex = 0;
+  bool _isLoading = true;
 
-  // Updated to match your Database List
-  final List<String> categories = [
-    "All",
-    "Food & Drink",
-    "Transportation",
-    "Rent",
-    "Utilities",
-    "Entertainment",
-    "Salary",
-    "Investments"
-  ];
+  // Lists to hold DB data
+  List<String> categoryNames = ["All"]; 
+  List<TransactionItem> allTransactions = [];
 
-  // --- MASTER LIST ---
-  List<TransactionItem> allTransactions = [
-    // Today
-    TransactionItem(
-      id: "1",
-      title: "Shell Station",
-      subtitle: "Gas & Oil",
-      amount: "- \$45.00",
-      isNegative: true,
-      iconBgColor: const Color(0xFFE3F2FD), // Light Blue (Transportation)
-      iconData: Icons.local_gas_station,
-      category: "Transportation",
-      date: "Today",
-    ),
-    TransactionItem(
-      id: "2",
-      title: "Paypal",
-      subtitle: "Freelance Payment",
-      amount: "+ \$80.00",
-      isNegative: false,
-      iconBgColor: const Color(0xFFE8F5E9), // Light Green (Salary/Earnings)
-      iconData: Icons.paypal,
-      category: "Salary",
-      date: "Today",
-    ),
-    TransactionItem(
-      id: "3",
-      title: "Stock Return",
-      subtitle: "Dividends",
-      amount: "+ \$150.00",
-      isNegative: false,
-      iconBgColor: const Color(0xFFE0F7FA), // Light Cyan (Investments)
-      iconData: Icons.trending_up,
-      category: "Investments",
-      date: "Today",
-    ),
-    TransactionItem(
-      id: "4",
-      title: "Netflix",
-      subtitle: "Subscription",
-      amount: "- \$12.00",
-      isNegative: true,
-      iconBgColor: const Color(0xFFF3E5F5), // Light Purple (Entertainment)
-      iconData: Icons.movie,
-      category: "Entertainment",
-      date: "Today",
-    ),
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
-    // Sep 25
-    TransactionItem(
-      id: "5",
-      title: "KFC",
-      subtitle: "Lunch",
-      amount: "- \$12.50",
-      isNegative: true,
-      iconBgColor: const Color(0xFFFFEBEE), // Light Red (Food & Drink)
-      iconData: Icons.fastfood,
-      category: "Food & Drink",
-      date: "Sep 25",
-    ),
-    TransactionItem(
-      id: "6",
-      title: "Starbucks",
-      subtitle: "Coffee",
-      amount: "- \$5.50",
-      isNegative: true,
-      iconBgColor: const Color(0xFFFFEBEE), // Light Red (Food & Drink)
-      iconData: Icons.coffee,
-      category: "Food & Drink",
-      date: "Sep 25",
-    ),
+  /// Loads Categories and Transactions from SQLite and merges them
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
 
-    // Sep 01
-    TransactionItem(
-      id: "7",
-      title: "Apartment Rent",
-      subtitle: "Monthly Rent",
-      amount: "- \$800.00",
-      isNegative: true,
-      iconBgColor: const Color(0xFFFFF3E0), // Light Orange (Rent)
-      iconData: Icons.home,
-      category: "Rent",
-      date: "Sep 01",
-    ),
-    TransactionItem(
-      id: "8",
-      title: "Electric Bill",
-      subtitle: "Monthly Utility",
-      amount: "- \$120.00",
-      isNegative: true,
-      iconBgColor: const Color(0xFFE0F2F1), // Light Teal (Utilities)
-      iconData: Icons.lightbulb,
-      category: "Utilities",
-      date: "Sep 01",
-    ),
-  ];
+    try {
+      // 1. Fetch Categories first (needed to resolve IDs)
+      final List<Category> dbCategories = await _api.fetchCategories();
+      
+      // Map Categories by ID for fast lookup (O(1))
+      final Map<int, Category> categoryMap = {
+        for (var cat in dbCategories) cat.id!: cat
+      };
 
+      // Update the horizontal selector list
+      List<String> loadedNames = ["All"];
+      loadedNames.addAll(dbCategories.map((c) => c.name));
+
+      // 2. Fetch Transactions
+      final List<Transaction> dbTransactions = await _api.fetchTransactions();
+
+      // 3. Convert Database Models to UI Models
+      final List<TransactionItem> uiItems = dbTransactions.map((t) {
+        // Find the linked category
+        final category = categoryMap[t.categoryId];
+        
+        // Defaults if category was deleted (safety check)
+        final String catName = category?.name ?? "Unknown";
+        final int iconCode = category?.iconCodePoint ?? Icons.help_outline.codePoint;
+        final int colorVal = category?.colorValue ?? Colors.grey.value;
+
+        // Format Amount
+        final String amountStr = "${t.type == TransactionType.income ? '+' : '-'} \$${t.amount.toStringAsFixed(2)}";
+        
+        // Format Date
+        final String dateStr = _formatDateForHeader(t.date);
+
+        return TransactionItem(
+          id: t.id.toString(),
+          title: t.title,
+          // If note is empty, show category name as subtitle
+          subtitle: (t.note.isNotEmpty) ? t.note : catName, 
+          amount: amountStr,
+          isNegative: t.type == TransactionType.expense,
+          iconBgColor: Color(colorVal).withOpacity(0.2), // Lighten the stored color
+          iconData: IconData(iconCode, fontFamily: 'MaterialIcons'), // USE DB ICON
+          category: catName,
+          dateHeader: dateStr,
+          rawDate: t.date,
+        );
+      }).toList();
+
+      // 4. Update State
+      if (mounted) {
+        setState(() {
+          categoryNames = loadedNames;
+          allTransactions = uiItems;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading transaction data: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Helper to format dates like "Today" or "Sep 25"
+  String _formatDateForHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final itemDate = DateTime(date.year, date.month, date.day);
+
+    if (itemDate == today) {
+      return "Today";
+    } else if (itemDate == today.subtract(const Duration(days: 1))) {
+      return "Yesterday";
+    }
+    return DateFormat('MMM dd').format(date);
+  }
+
+  /// Filtering and Grouping Logic
   List<DaySection> get currentSections {
     List<TransactionItem> filteredItems;
+    
+    // 1. Filter by Category
     if (selectedCategoryIndex == 0) {
-      filteredItems = allTransactions;
+      filteredItems = List.from(allTransactions);
     } else {
-      String selectedCategory = categories[selectedCategoryIndex];
-      filteredItems = allTransactions
-          .where((item) => item.category == selectedCategory)
-          .toList();
+      String selectedCategory = categoryNames[selectedCategoryIndex];
+      filteredItems = allTransactions.where((item) => item.category == selectedCategory).toList();
     }
 
+    // 2. Sort by Date (Newest first)
+    filteredItems.sort((a, b) => b.rawDate.compareTo(a.rawDate));
+
+    // 3. Group into Sections
     List<DaySection> sections = [];
     for (var item in filteredItems) {
-      var existingSectionIndex =
-          sections.indexWhere((s) => s.headerTitle == item.date);
+      var existingSectionIndex = sections.indexWhere((s) => s.headerTitle == item.dateHeader);
       if (existingSectionIndex != -1) {
         sections[existingSectionIndex].items.add(item);
       } else {
-        sections.add(DaySection(item.date, [item]));
+        sections.add(DaySection(item.dateHeader, [item]));
       }
     }
     return sections;
@@ -191,27 +184,25 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
+        title: const Text("Transactions", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        centerTitle: true,
       ),
-      body: SafeArea(
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              const Center(
-                child: Text("Transactions",
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black)),
-              ),
-              const SizedBox(height: 25),
+              
+              // Category Selector
               SizedBox(
                 height: 40,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: categories.length,
+                  itemCount: categoryNames.length,
                   itemBuilder: (context, index) {
                     final isSelected = index == selectedCategoryIndex;
                     return GestureDetector(
@@ -229,7 +220,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                         alignment: Alignment.topCenter,
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
-                          categories[index],
+                          categoryNames[index],
                           style: TextStyle(
                             fontSize: 16,
                             color: isSelected
@@ -246,8 +237,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 ),
               ),
               const SizedBox(height: 10),
+              
+              // List of Transactions
               Expanded(
-                child: ListView.builder(
+                child: currentSections.isEmpty 
+                  ? _buildEmptyState()
+                  : ListView.builder(
                   itemCount: currentSections.length,
                   itemBuilder: (context, index) =>
                       _buildDaySection(currentSections[index]),
@@ -256,6 +251,22 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.receipt_long, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            "No transactions found",
+            style: TextStyle(color: Colors.grey[500], fontSize: 16),
+          ),
+        ],
       ),
     );
   }
@@ -281,28 +292,17 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget _buildTransactionTile(TransactionItem item) {
     return GestureDetector(
       onTap: () async {
-        final result = await Navigator.push(
+        // Navigation to Edit Screen
+        final updatedItem = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => EditTransactionScreen(item: item),
           ),
         );
-
-        if (result == null) return;
-
-        if (result is Map<String, dynamic> && result['action'] == 'delete') {
-          final id = result['id'] as String;
-          setState(() {
-            allTransactions.removeWhere((element) => element.id == id);
-          });
-        } else if (result is TransactionItem) {
-          setState(() {
-            final index =
-                allTransactions.indexWhere((element) => element.id == item.id);
-            if (index != -1) {
-              allTransactions[index] = result;
-            }
-          });
+        
+        // If we return from Edit Screen (whether saved or deleted), reload the DB data
+        if (updatedItem != null) {
+           _loadData();
         }
       },
       child: Container(
@@ -329,8 +329,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           fontWeight: FontWeight.w600,
                           color: Colors.black)),
                   const SizedBox(height: 4),
-                  Text(item.subtitle,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                  Text(item.subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'transaction.dart';
+import '../db/api.dart';
+import '../db/database.dart';
+import '../main.dart'; 
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -9,56 +11,57 @@ class AddTransactionScreen extends StatefulWidget {
 }
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  // --- CONTROLLERS ---
+  final API _api = API(); 
+
   late TextEditingController amountController;
   late TextEditingController noteController;
-  
-  // --- STATE ---
+
+  bool isLoading = true;
   bool isIncome = false;
-  late String selectedCategory;
+  Category? selectedCategory;
   late DateTime selectedDate;
 
-  // --- CATEGORY LISTS ---
-  final List<String> expenseCategories = [
-    "Food & Drink",
-    "Transportation",
-    "Rent",
-    "Utilities",
-    "Entertainment"
-  ];
-  final List<String> incomeCategories = [
-    "Salary",
-    "Investments"
-  ];
+  List<Category> _expenseCategories = [];
+  List<Category> _incomeCategories = [];
 
   @override
   void initState() {
     super.initState();
     amountController = TextEditingController();
     noteController = TextEditingController();
-    isIncome = false;
-    selectedCategory = "Food & Drink";
     selectedDate = DateTime.now();
+    _loadCategories();
   }
 
-  List<String> get currentCategoryOptions =>
-      isIncome ? incomeCategories : expenseCategories;
+  Future<void> _loadCategories() async {
+    try {
+      final cats = await _api.fetchCategories();
+      if (mounted) {
+        setState(() {
+          _expenseCategories = cats
+              .where((c) => c.defaultType == TransactionType.expense)
+              .toList();
+          _incomeCategories = cats
+              .where((c) => c.defaultType == TransactionType.income)
+              .toList();
 
-  // --- DATE FORMAT HELPERS ---
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    if (date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day) {
-      return "Today";
+          if (!isIncome && _expenseCategories.isNotEmpty) {
+            selectedCategory = _expenseCategories.first;
+          } else if (isIncome && _incomeCategories.isNotEmpty) {
+            selectedCategory = _incomeCategories.first;
+          }
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error loading categories: $e");
+      if (mounted) setState(() => isLoading = false);
     }
-    const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ];
-    return "${months[date.month - 1]} ${date.day}";
   }
-  
+
+  List<Category> get currentCategoryOptions =>
+      isIncome ? _incomeCategories : _expenseCategories;
+
   String _formatFullDate(DateTime date) {
     const months = [
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -67,70 +70,52 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return "${months[date.month - 1]} ${date.day}, ${date.year}";
   }
 
-  // --- BUILD AND RETURN NEW TRANSACTION ITEM ---
-  void _addTransaction() {
-    if (amountController.text.trim().isEmpty) {
+  Future<void> _addTransaction() async {
+    if (amountController.text.trim().isEmpty || selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter an amount and select a category")),
+      );
       return;
     }
 
-    IconData newIcon;
-    Color newColor;
+    final amount = double.tryParse(amountController.text);
+    if (amount == null) return;
 
-    // --- COLOR AND ICON LOGIC ---
-    switch (selectedCategory) {
-      case "Food & Drink":
-        newIcon = Icons.fastfood;
-        newColor = const Color(0xFFFFEBEE);
-        break;
-      case "Transportation":
-        newIcon = Icons.local_gas_station;
-        newColor = const Color(0xFFE3F2FD);
-        break;
-      case "Rent":
-        newIcon = Icons.home;
-        newColor = const Color(0xFFFFF3E0);
-        break;
-      case "Utilities":
-        newIcon = Icons.lightbulb;
-        newColor = const Color(0xFFE0F2F1);
-        break;
-      case "Entertainment":
-        newIcon = Icons.movie;
-        newColor = const Color(0xFFF3E5F5);
-        break;
-      case "Salary":
-        newIcon = Icons.attach_money;
-        newColor = const Color(0xFFE8F5E9);
-        break;
-      case "Investments":
-        newIcon = Icons.trending_up;
-        newColor = const Color(0xFFE0F7FA);
-        break;
-      default:
-        newIcon = Icons.help_outline;
-        newColor = Colors.grey.shade200;
-        break;
+    setState(() => isLoading = true);
+
+    try {
+      final newTransaction = Transaction(
+        // Use input as Title (e.g. "KFC")
+        title: noteController.text.isEmpty
+            ? selectedCategory!.name
+            : noteController.text,
+        amount: amount,
+        type: isIncome ? TransactionType.income : TransactionType.expense,
+        categoryId: selectedCategory!.id!,
+        date: selectedDate,
+        // FIX: Leave note empty to avoid duplication.
+        // The input field is essentially serving as the Title.
+        note: '', 
+      );
+
+      await _api.addTransaction(newTransaction);
+      globalRefreshTrigger.value++;
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      print("Error adding transaction: $e");
+      if (mounted) setState(() => isLoading = false);
     }
-
-    final newItem = TransactionItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: noteController.text.isEmpty
-          ? selectedCategory
-          : noteController.text,
-      subtitle: "",
-      amount: "${isIncome ? '+' : '-'} \$${amountController.text}",
-      isNegative: !isIncome,
-      iconBgColor: newColor,
-      iconData: newIcon,
-      category: selectedCategory,
-      date: _formatDate(selectedDate),
-    );
-
-    Navigator.pop(context, newItem);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -159,26 +144,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 children: [
                   const Text(
                     "USD",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.grey),
                   ),
                   const SizedBox(width: 10),
                   IntrinsicWidth(
                     child: TextField(
                       controller: amountController,
-                      style: const TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w600),
                       decoration: const InputDecoration(
                         border: InputBorder.none,
+                        hintText: "0",
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
                 ],
@@ -200,8 +177,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               const SizedBox(height: 30),
               _buildClickableField(
                 label: "Category",
-                value: selectedCategory,
-                icon: Icons.category_outlined,
+                value: selectedCategory?.name ?? "Select Category",
+                icon: selectedCategory != null 
+                    ? IconData(selectedCategory!.iconCodePoint, fontFamily: 'MaterialIcons')
+                    : Icons.category_outlined,
                 onTap: _showCategoryPicker,
               ),
               const SizedBox(height: 20),
@@ -217,10 +196,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 children: [
                   const Text(
                     "Note",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -228,9 +204,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.grey.shade300,
-                        ),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -248,17 +222,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   onPressed: _addTransaction,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5C6BC0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text(
-                    "Add",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  ),
+                  child: const Text("Add", style: TextStyle(color: Colors.white, fontSize: 16)),
                 ),
               ),
             ],
@@ -268,7 +234,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  // --- DATE PICKER ---
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -293,8 +258,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  // --- CATEGORY PICKER ---
   void _showCategoryPicker() {
+    final options = currentCategoryOptions;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -303,7 +268,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(16),
-          height: 350,
+          height: 400,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -313,21 +278,35 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: ListView.separated(
-                  itemCount: currentCategoryOptions.length,
-                  separatorBuilder: (_, __) => const Divider(),
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(currentCategoryOptions[index]),
-                      onTap: () {
-                        setState(() {
-                          selectedCategory = currentCategoryOptions[index];
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
+                child: options.isEmpty
+                    ? const Center(child: Text("No categories found"))
+                    : ListView.separated(
+                        itemCount: options.length,
+                        separatorBuilder: (_, __) => const Divider(),
+                        itemBuilder: (context, index) {
+                          final cat = options[index];
+                          return ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Color(cat.colorValue).withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                IconData(cat.iconCodePoint, fontFamily: 'MaterialIcons'),
+                                color: Color(cat.colorValue),
+                              ),
+                            ),
+                            title: Text(cat.name),
+                            onTap: () {
+                              setState(() {
+                                selectedCategory = cat;
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -336,15 +315,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  // --- TOGGLE BUTTON WIDGET ---
   Widget _buildToggleButton(String text, bool isActive) {
     return Expanded(
       child: GestureDetector(
         onTap: () {
           setState(() {
             isIncome = text == "Income";
-            if (!currentCategoryOptions.contains(selectedCategory)) {
-              selectedCategory = currentCategoryOptions.first;
+            if (isIncome && _incomeCategories.isNotEmpty) {
+              selectedCategory = _incomeCategories.first;
+            } else if (!isIncome && _expenseCategories.isNotEmpty) {
+              selectedCategory = _expenseCategories.first;
+            } else {
+              selectedCategory = null;
             }
           });
         },
@@ -359,9 +341,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               text,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: isActive
-                    ? const Color(0xFF1565C0)
-                    : Colors.grey,
+                color: isActive ? const Color(0xFF1565C0) : Colors.grey,
               ),
             ),
           ),
@@ -370,7 +350,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  // --- CLICKABLE FIELD WIDGET ---
   Widget _buildClickableField({
     required String label,
     required String value,
@@ -382,19 +361,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(12),
@@ -404,10 +377,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               children: [
                 Icon(icon, size: 20, color: Colors.grey.shade700),
                 const SizedBox(width: 12),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 16),
-                ),
+                Text(value, style: const TextStyle(fontSize: 16)),
                 const Spacer(),
                 const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
               ],
